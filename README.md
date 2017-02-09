@@ -2,12 +2,7 @@
 
 This is a template for a C++ project. It's a good starting point. Clone and start hacking.
 
-    git clone https://github.com/evpo/cpp_project_template.git cpp_project
-    cd cpp_project/deps
-    wget https://github.com/google/googletest/archive/release-1.8.0.tar.gz
-    tar xf release-1.8.0.tar.gz
-    move googletest-release-1.8.0 gtest
-    rm release-1.8.0.tar.gz
+    git clone https://github.com/evpo/cpp-project-template.git cpp_project
 
 CLI:
 
