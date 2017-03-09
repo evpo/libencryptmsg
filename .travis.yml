@@ -1,0 +1,16 @@
+language: cpp
+os: linux
+compiler: gcc
+env: CONFIG=Debug
+
+install:
+script:
+    - make
+    - make tests
+    - ./bin/debug/cpp-project-tests
+addons:
+    apt:
+        sources:
+            - ubuntu-toolchain-r-test
+        packages:
+            - g++-5
