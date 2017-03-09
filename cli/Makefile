@@ -9,6 +9,7 @@ endif
 CXXFLAGS += -Wall -Wextra -std=c++11
 CXXFLAGS += -I../include
 LDFLAGS += -Wall
+LOADLIBES += -lm
 
 ifeq ($(RELEASE),on)
 TARGETDIR := ../../bin/release
