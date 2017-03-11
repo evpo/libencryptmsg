@@ -41,6 +41,7 @@ Clean:
 
 1. [stlplus](http://stlplus.sourceforge.net/)
 2. [gtest](https://github.com/google/googletest)
+3. [plog](https://github.com/SergiusTheBest/plog)
 
 ##License
 
