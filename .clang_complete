@@ -8,6 +8,7 @@
 -I./deps/stlplus/portability
 -I./deps/stlplus/containers
 -I./deps/gtest/googletest/include
+-I./deps/plog/include
 -std=c++11
 -w
 -fPIC

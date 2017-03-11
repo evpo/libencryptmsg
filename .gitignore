@@ -4,3 +4,4 @@ MINGW-*
 GNULINUX-*
 MACOS-*
 *.swp
+*.log

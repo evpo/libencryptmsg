@@ -4,6 +4,7 @@
 #include "version.h"
 #include "cli_parser.hpp"
 #include "hello_name_generator.h"
+#include "logger_init.h"
 
 using namespace std;
 using namespace stlplus;
@@ -34,6 +35,13 @@ int main(int, char *argv[])
             ""
         },
         {
+            "log",
+            cli_kind_t::cli_value_kind,
+            cli_mode_t::cli_single_mode,
+            "log",
+            ""
+        },
+        {
             "",
             cli_kind_t::cli_value_kind,
             cli_mode_t::cli_single_mode,
@@ -51,6 +59,8 @@ int main(int, char *argv[])
         exit(1);
     }
 
+    string log_file;
+
     string name = "Sir/Madam";
     for(unsigned i = 0; i < parser.size(); i++)
     {
@@ -59,11 +69,22 @@ int main(int, char *argv[])
             PrintUsage();
             exit(0);
         }
+        else if(parser.name(i) == "log")
+        {
+            log_file = parser.string_value(i);
+        }
         else if(parser.name(i) == "")
         {
             name = parser.string_value(i);
         }
     }
+
+    if(log_file.empty())
+    {
+        log_file = "debug.log";
+    }
+
+    InitLogger(log_file);
     cout << GenerateHelloName(name) << endl;
     return 0;
 }
