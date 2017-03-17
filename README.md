@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/evpo/cpp-project-template.svg?branch=master)](https://travis-ci.org/evpo/cpp-project-template)
-#Project
+
+#Project template
 
 This is a template for a C++ project. It's a good starting point. Clone and start hacking.
 
