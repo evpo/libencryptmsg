@@ -5,6 +5,7 @@
 This is a template for a C++ project. It's a good starting point. Clone and start hacking.
 
     git clone https://github.com/evpo/cpp-project-template.git cpp_project
+    git remote remove origin
 
 CLI:
 
