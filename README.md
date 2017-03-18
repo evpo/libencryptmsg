@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/evpo/cpp-project-template.svg?branch=master)](https://travis-ci.org/evpo/cpp-project-template)
 
-#Project template
+# Project template
 
 This is a template for a C++ project. It's a good starting point. Clone and start hacking.
 
@@ -14,13 +14,13 @@ Unit tests:
 
     ./bin/debug/cpp-project-tests
 
-##System requirements
+## System requirements
 
     Linux
     Mingw
     C++11 g++ or clang
 
-##Compile
+## Compile
 
 Build:
 
@@ -38,12 +38,16 @@ Clean:
 
     make clean
 
-##Acknowledgments
+Tests:
+
+    make tests
+    
+## Acknowledgments
 
 1. [stlplus](http://stlplus.sourceforge.net/)
 2. [gtest](https://github.com/google/googletest)
 3. [plog](https://github.com/SergiusTheBest/plog)
 
-##License
+## License
 
 Creative Commons BSD License
