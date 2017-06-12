@@ -42,7 +42,7 @@ namespace LibEncryptMsg
             void Start(const Passphrase &passphrase);
             void Start(const EncryptionKey &encryption_key);
             // Analyze bytes. Returns true when the parameters are received
-            bool Update(Botan::secure_vector<uint8_t> &buf, size_t offset = 0);
+            bool Update(const Botan::secure_vector<uint8_t> &buf, size_t offset = 0);
             void Finish(Botan::secure_vector<uint8_t> &buf, size_t offset = 0);
             const MessageParameters &GetMessageParameters() const;
             const SecurityParameters &GetSecurityParameters() const;

@@ -1,4 +1,49 @@
 #include "message_encryption.h"
+#include <stack>
+using namespace std;
+namespace
+{
+    class MessagePacket;
+
+    class PacketStack
+    {
+        stack<MessagePacket*> packets;
+    };
+
+    class MessagePacket
+    {
+        protected:
+            virtual void DoStart(PacketStack *packet_stack) = 0;
+            virtual void DoUpdate(Botan::secure_vector<uint8_t> &buf) = 0;
+            virtual void DoFinish(Botan::secure_vector<uint8_t> &buf) = 0;
+        public:
+            void Start(PacketStack *packet_stack)
+            {
+                DoStart(packet_stack);
+            }
+            void Update(Botan::secure_vector<uint8_t> &buf)
+            {
+                DoUpdate(buf);
+            }
+            void Finish(Botan::secure_vector<uint8_t> &buf)
+            {
+                DoFinish(buf);
+            }
+    };
+
+    class PacketHeader : public MessagePacket
+    {
+        private:
+            PacketStack *packet_stack_;
+        protected:
+            void DoStart(PacketStack *packet_stack) final
+            {
+                packet_stack_ = packet_stack;
+                packet_stack_->packets.push(this);
+            }
+    };
+
+}
 namespace LibEncryptMsg
 {
     void PacketAnalyzer::Start()
@@ -10,7 +55,7 @@ namespace LibEncryptMsg
     void PacketAnalyzer::Start(const EncryptionKey &encryption_key)
     {
     }
-    bool PacketAnalyzer::Update(Botan::secure_vector<uint8_t> &buf, size_t offset)
+    bool PacketAnalyzer::Update(const Botan::secure_vector<uint8_t> &buf, size_t offset)
     {
         return false;
     }
