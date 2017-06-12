@@ -62,6 +62,7 @@ int main(int, char *argv[])
     string log_file;
 
     string name = "Sir/Madam";
+    string passphrase = "";
     for(unsigned i = 0; i < parser.size(); i++)
     {
         if(parser.name(i) == "help")
@@ -72,6 +73,10 @@ int main(int, char *argv[])
         else if(parser.name(i) == "log")
         {
             log_file = parser.string_value(i);
+        }
+        else if(parser.name(i) == "passphrase")
+        {
+            passphrase = parser.string_value(i);
         }
         else if(parser.name(i) == "")
         {
@@ -86,5 +91,9 @@ int main(int, char *argv[])
 
     InitLogger(log_file);
     cout << GenerateHelloName(name) << endl;
+
+
+
+
     return 0;
 }

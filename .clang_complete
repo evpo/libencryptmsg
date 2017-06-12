@@ -9,6 +9,7 @@
 -I./deps/stlplus/containers
 -I./deps/gtest/googletest/include
 -I./deps/plog/include
+-I./deps/botan2/build/include
 -std=c++11
 -w
 -fPIC

@@ -9,9 +9,9 @@ ifeq ($(RELEASE),on)
 CXXFLAGS += -ggdb
 endif
 
-LOADLIBES += ../deps/gtest/googletest/build/libgtest.a -lpthread -lm
+LOADLIBES += ../deps/gtest/googletest/build/libgtest.a -L../deps/botan2 -lbotan-2 -lpthread -lm -Wl,-rpath,../../deps/botan2
 CXXFLAGS += -I../deps/gtest/googletest/include -pthread -std=c++11 -Wall -Wextra
-CXXFLAGS += -I../include -I../include/internal -I../deps/stlplus/containers
+CXXFLAGS += -I../include -I../include/internal -I../deps/stlplus/containers -I../deps/botan2/build/include
 
 LDFLAGS += -Wall
 
