@@ -1,47 +1,137 @@
 #include "message_encryption.h"
-#include <stack>
+#include <vector>
+#include <memory>
+#include "assert.h"
+
 using namespace std;
+using namespace Botan;
 namespace
 {
-    class MessagePacket;
-
-    class PacketStack
+    typedef std::streamoff stream_length_type;
+    enum class PacketType
     {
-        stack<MessagePacket*> packets;
+        Unknown = -1,
+        Header = -2,
+        SymmetricKeyESK = 3,
+        Symmetric = 9,
+        SymmetricIntegProtected = 18,
+        Compressed = 8,
+        MDC = 19,
+        Literal = 11,
     };
 
+    struct PacketHeader
+    {
+        PacketType packet_type;
+        stream_length_type body_length;
+        bool is_new_format;
+        bool is_partial_length;
+        PacketHeader():
+            packet_type(PacketType::Unknown),
+            body_length(0),
+            is_new_format(false),
+            is_partial_length(false){}
+
+    };
+
+    class MessagePacket;
+
+    struct PacketStack
+    {
+        vector<MessagePacket*> packets;
+    };
+    struct SessionState
+    {
+        PacketStack packet_stack;
+        PacketHeader packet_header;
+    };
     class MessagePacket
     {
         protected:
-            virtual void DoStart(PacketStack *packet_stack) = 0;
-            virtual void DoUpdate(Botan::secure_vector<uint8_t> &buf) = 0;
-            virtual void DoFinish(Botan::secure_vector<uint8_t> &buf) = 0;
+            PacketType packet_type_;
+            SessionState &state_;
+            virtual void DoUpdate(Botan::secure_vector<uint8_t> &in, Botan::secure_vector<uint8_t> &out) = 0;
         public:
-            void Start(PacketStack *packet_stack)
+            MessagePacket(SessionState &state):state_(state)
             {
-                DoStart(packet_stack);
             }
-            void Update(Botan::secure_vector<uint8_t> &buf)
+            // Update the stream. After the function:
+            // if in is not empty, the excess is a sibling packet.
+            // if out is not empty, there is a child packet inside unless it's literal
+            void Update(Botan::secure_vector<uint8_t> &in, Botan::secure_vector<uint8_t> &out)
             {
-                DoUpdate(buf);
+                DoUpdate(in, out);
             }
-            void Finish(Botan::secure_vector<uint8_t> &buf)
+
+            PacketType GetPacketType() const
             {
-                DoFinish(buf);
+                return packet_type_;
             }
     };
 
-    class PacketHeader : public MessagePacket
+    class PacketHeaderPacket : public MessagePacket
     {
-        private:
-            PacketStack *packet_stack_;
-        protected:
-            void DoStart(PacketStack *packet_stack) final
+        public:
+            PacketHeaderPacket(SessionState &state):MessagePacket(state)
             {
-                packet_stack_ = packet_stack;
-                packet_stack_->packets.push(this);
+                packet_type_ = PacketType::Header;
+            }
+        private:
+            secure_vector<uint8_t> buffer_;
+        protected:
+            void DoUpdate(Botan::secure_vector<uint8_t> &in, Botan::secure_vector<uint8_t> &out) final
+            {
             }
     };
+
+    std::unique_ptr<SessionState> CreateSessionState()
+    {
+        std::unique_ptr<SessionState> ret_val(new SessionState());
+        ret_val->packet_stack.packets.push_back(new PacketHeaderPacket(*ret_val));
+        return ret_val;
+    }
+
+    MessagePacket *CreatePacket(SessionState &session_state, PacketType type)
+    {
+        switch(type)
+        {
+            case PacketType::Header:
+                return new PacketHeaderPacket(session_state);
+            default:
+                assert(false); // TODO: throw unknown type
+                return nullptr;
+        }
+    }
+
+    void PushPackets(SessionState &session_state, Botan::secure_vector<uint8_t> &buf)
+    {
+        const unsigned kBufferSize = 1024;
+        PacketStack &packet_stack = session_state.packet_stack;
+        secure_vector<uint8_t> buf_in;
+        secure_vector<uint8_t> buf_out;
+        buf_in = buf;
+        for(size_t i = 0; i < packet_stack.packets.size(); i++)
+        {
+            while(!buf_in.empty())
+            {
+                packet_stack.packets[i]->Update(buf_in, buf_out);
+                if(!buf_in.empty() && packet_stack.packets[i]->GetPacketType() == PacketType::Header)
+                {
+                    // we have just finished header
+                    delete packet_stack.packets[i];
+                    packet_stack.packets[i] = CreatePacket(session_state, session_state.packet_header.packet_type);
+                }
+                else if(!buf_in.empty())
+                {
+                    // we have finished a packet, need a new header
+                    delete packet_stack.packets[i];
+                    packet_stack.packets[i] = new PacketHeaderPacket(session_state);
+                }
+            }
+            buf_in.swap(buf_out);
+        }
+        buf.swap(buf_in);
+    }
 
 }
 namespace LibEncryptMsg
