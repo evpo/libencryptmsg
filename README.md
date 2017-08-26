@@ -1,19 +1,16 @@
-[![Build Status](https://travis-ci.org/evpo/cpp-project-template.svg?branch=master)](https://travis-ci.org/evpo/cpp-project-template)
+# libEncryptMsg
 
-# Project template
+This is an OpenPGP implementation that works with symmetrically encrypted files following RFC4880 specification.
 
-This is a template for a C++ project. It's a good starting point. Clone and start hacking.
-
-    git clone https://github.com/evpo/cpp-project-template.git cpp_project
-    git remote remove origin
+**This library is currently in Alpha stage. It is not recommended for production**
 
 CLI:
 
-    ./bin/debug/cpp-project
+    ./bin/debug/encryptmsg
 
 Unit tests:
 
-    ./bin/debug/cpp-project-tests
+    ./bin/debug/encryptmsg-tests
 
 ## System requirements
 
@@ -42,13 +39,18 @@ Clean:
 Tests:
 
     make tests
-    
+
 ## Acknowledgments
 
-1. [stlplus](http://stlplus.sourceforge.net/)
-2. [gtest](https://github.com/google/googletest)
-3. [plog](https://github.com/SergiusTheBest/plog)
+1. [**Botan**](http://botan.randombit.net/)
+2. [**stlplus**](http://stlplus.sourceforge.net/)
+3. [**Makefiles**](http://stlplus.sourceforge.net/makefiles/docs/)
+4. [**zlib**](http://zlib.net/)
+5. [**gtest**](http://code.google.com/p/googletest/)
+6. [**plog**](https://github.com/SergiusTheBest/plog)
 
 ## License
 
-Creative Commons BSD License
+libEncryptMsg is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version.
+
+libEncryptMsg is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.

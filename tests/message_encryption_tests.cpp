@@ -5,6 +5,11 @@
 #include <algorithm>
 #include "gtest/gtest.h"
 #include "message_encryption.h"
+#include "message_decryption.h"
+#include "emsg_symmetric_key.h"
+#include "openpgp_conversions.h"
+#include "test_helper.h"
+#include "plog/Log.h"
 
 using namespace std;
 using namespace Botan;
@@ -13,65 +18,99 @@ namespace LibEncryptMsg
 {
     namespace UnitTests
     {
-        class MessageEncryptionFixture : public ::testing::Test
+        class MessageEncryptionFixture : public ::testing::TestWithParam<size_t> // Param is buffer size
         {
+            public:
+                static size_t ParameterCombination[];
             protected:
-                const size_t kBufferSize = 1024;
+                size_t buffer_size_;
                 vector<uint8_t> plain_file_;
                 vector<uint8_t> encrypted_file_;
+                secure_vector<uint8_t> buf_;
 
-                virtual void SetUp()
-                {
-                    const string plain_file_path = "../../test_assets/simple_text.txt";
-                    const string encrypted_file_path = "../../test_assets/simple_text.txt.gpg";
+                virtual void SetUp() override;
 
-                    ifstream stm(plain_file_path);
-                    std::copy(istream_iterator<uint8_t>(stm), istream_iterator<uint8_t>(),
-                            back_inserter(plain_file_));
-                    ifstream stm2(encrypted_file_path);
-                    std::copy(istream_iterator<uint8_t>(stm2), istream_iterator<uint8_t>(),
-                            back_inserter(encrypted_file_));
-                }
-
-                virtual void TearDown()
-                {
-                }
+                SecureVector Update(MessageWriter &writer);
+                SecureVector Decrypt(const SecureVector &passphrase);
         };
 
-        TEST_F(MessageEncryptionFixture, When_packet_analyzer_works_Then_headers_are_correct)
+        size_t MessageEncryptionFixture::ParameterCombination[] = {8, 24, 128, 512, 1024};
+
+        INSTANTIATE_TEST_CASE_P(Common, MessageEncryptionFixture,
+                ::testing::ValuesIn(MessageEncryptionFixture::ParameterCombination));
+
+        void MessageEncryptionFixture::SetUp()
+        {
+            const string plain_file_path = "simple_text.txt";
+            const string encrypted_file_path = "simple_text.txt.gpg";
+
+            ifstream stm(plain_file_path, ios_base::binary);
+            std::copy(istreambuf_iterator<char>(stm), istreambuf_iterator<char>(),
+                    back_inserter(plain_file_));
+            ifstream stm2(encrypted_file_path, ios_base::binary);
+            std::copy(istreambuf_iterator<char>(stm2), istreambuf_iterator<char>(),
+                    back_inserter(encrypted_file_));
+
+            buffer_size_ = GetParam();
+        }
+
+        TEST_P(MessageEncryptionFixture, When_message_writer_finishes_Then_message_is_encrypted)
         {
             //Arrange
-            secure_vector<uint8_t> buf;
-            buf.resize(kBufferSize);
-            PacketAnalyzer analyzer;
-            auto it = plain_file_.begin();
+            MessageWriter writer;
+            string pwd_str("123456");
+            SecureVector passphrase(FromChar(pwd_str.data()), FromChar(pwd_str.data()) + pwd_str.size());
+            MessageConfig config;
+            config.SetCipherAlgo(CipherAlgo::AES256);
+            config.SetHashAlgo(HashAlgo::SHA256);
+            config.SetIterations(EncodeS2KIterations(1600000));
+
+            config.SetCompression(Compression::ZLIB);
+            config.SetFileName("encrypted_file.txt");
+            config.SetFileDate(0);
+            config.SetBinary(true);
+            config.SetPartialLengthPower(4); // 2^4 is the partial length size. It's not legal in rfc. The length should not be less than 512
+
+            Salt salt = GenerateRandomSalt();
 
             //Act
-            analyzer.Start();
-            bool update_result = false;
-            while(it != plain_file_.end() && !update_result)
-            {
-                auto it_next = std::min(it + kBufferSize, plain_file_.end());
-                buf.resize(it_next - it);
-                std::copy(it, it_next, buf.begin());
-                update_result = analyzer.Update(buf);
-                it = it_next;
-            }
+            writer.Start(passphrase, config, salt);
+            auto buf = Update(writer);
 
             //Assert
-            auto message = analyzer.GetMessageParameters();
-            auto security = analyzer.GetSecurityParameters();
-            ASSERT_EQ(CipherAlgo::AES256, message.cipher_algo);
-            ASSERT_EQ(HashAlgo::SHA256, security.hash_algo);
-            ASSERT_EQ(1015808U, security.iterations);
-            ostringstream stm;
-            auto salt_it = security.salt.begin();
-            for(;salt_it != security.salt.end(); salt_it++)
+            buf_ = buf;
+            auto output = Decrypt(passphrase);
+            ASSERT_EQ(plain_file_.size(), output.size());
+            bool result = std::equal(output.begin(), output.end(), plain_file_.begin());
+            ASSERT_TRUE(result);
+        }
+
+        SecureVector MessageEncryptionFixture::Update(MessageWriter &writer)
+        {
+            SecureVector ret_val;
+            buf_.resize(buffer_size_);
+            auto it = plain_file_.begin();
+            while(it != plain_file_.end())
             {
-                stm << ios_base::hex << *salt_it;
+                auto it_next = std::min(it + buffer_size_, plain_file_.end());
+                buf_.resize(it_next - it);
+                std::copy(it, it_next, buf_.begin());
+                if(it_next == plain_file_.end())
+                    writer.Finish(buf_);
+                else
+                    writer.Update(buf_);
+                ret_val.insert(ret_val.end(), buf_.begin(), buf_.end());
+                it = it_next;
             }
-            string salt = stm.str();
-            ASSERT_EQ("04D58C5C071A5B3F", stm.str());
+            return ret_val;
+        }
+
+        SecureVector MessageEncryptionFixture::Decrypt(const SecureVector &passphrase)
+        {
+            MessageReader reader;
+            reader.Start(passphrase);
+            reader.Finish(buf_);
+            return buf_;
         }
     }
 }

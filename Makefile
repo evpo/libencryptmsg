@@ -5,6 +5,7 @@ gtest::
 
 tests:: gtest src
 	$(MAKE) -C tests RELEASE=$(RELEASE)
+	$(MAKE) -C test_assets RELEASE=$(RELEASE)
 
 cli:: src
 	$(MAKE) -C cli RELEASE=$(RELEASE)
@@ -17,3 +18,4 @@ clean::
 	$(MAKE) -C tests clean RELEASE=$(RELEASE)
 	$(MAKE) -C cli clean RELEASE=$(RELEASE)
 	$(MAKE) -C src clean RELEASE=$(RELEASE)
+	$(MAKE) -C test_assets clean RELEASE=$(RELEASE)

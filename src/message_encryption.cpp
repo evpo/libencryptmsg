@@ -1,204 +1,196 @@
 #include "message_encryption.h"
-#include <vector>
 #include <memory>
 #include "assert.h"
+#include "botan/pbkdf.h"
+#include "context.h"
+#include "packet_writer.h"
+#include "session_state.h"
+#include "algo_spec.h"
+#include "openpgp_conversions.h"
+#include "emsg_symmetric_key.h"
 
 using namespace std;
-using namespace Botan;
-namespace
-{
-    typedef std::streamoff stream_length_type;
-    enum class PacketType
-    {
-        Unknown = -1,
-        Header = -2,
-        SymmetricKeyESK = 3,
-        Symmetric = 9,
-        SymmetricIntegProtected = 18,
-        Compressed = 8,
-        MDC = 19,
-        Literal = 11,
-    };
+using namespace LightStateMachine;
+using namespace LightStateMachine::Client;
+using namespace LibEncryptMsg;
 
-    struct PacketHeader
-    {
-        PacketType packet_type;
-        stream_length_type body_length;
-        bool is_new_format;
-        bool is_partial_length;
-        PacketHeader():
-            packet_type(PacketType::Unknown),
-            body_length(0),
-            is_new_format(false),
-            is_partial_length(false){}
-
-    };
-
-    class MessagePacket;
-
-    struct PacketStack
-    {
-        vector<MessagePacket*> packets;
-    };
-    struct SessionState
-    {
-        PacketStack packet_stack;
-        PacketHeader packet_header;
-    };
-    class MessagePacket
-    {
-        protected:
-            PacketType packet_type_;
-            SessionState &state_;
-            virtual void DoUpdate(Botan::secure_vector<uint8_t> &in, Botan::secure_vector<uint8_t> &out) = 0;
-        public:
-            MessagePacket(SessionState &state):state_(state)
-            {
-            }
-            // Update the stream. After the function:
-            // if in is not empty, the excess is a sibling packet.
-            // if out is not empty, there is a child packet inside unless it's literal
-            void Update(Botan::secure_vector<uint8_t> &in, Botan::secure_vector<uint8_t> &out)
-            {
-                DoUpdate(in, out);
-            }
-
-            PacketType GetPacketType() const
-            {
-                return packet_type_;
-            }
-    };
-
-    class PacketHeaderPacket : public MessagePacket
-    {
-        public:
-            PacketHeaderPacket(SessionState &state):MessagePacket(state)
-            {
-                packet_type_ = PacketType::Header;
-            }
-        private:
-            secure_vector<uint8_t> buffer_;
-        protected:
-            void DoUpdate(Botan::secure_vector<uint8_t> &in, Botan::secure_vector<uint8_t> &out) final
-            {
-            }
-    };
-
-    std::unique_ptr<SessionState> CreateSessionState()
-    {
-        std::unique_ptr<SessionState> ret_val(new SessionState());
-        ret_val->packet_stack.packets.push_back(new PacketHeaderPacket(*ret_val));
-        return ret_val;
-    }
-
-    MessagePacket *CreatePacket(SessionState &session_state, PacketType type)
-    {
-        switch(type)
-        {
-            case PacketType::Header:
-                return new PacketHeaderPacket(session_state);
-            default:
-                assert(false); // TODO: throw unknown type
-                return nullptr;
-        }
-    }
-
-    void PushPackets(SessionState &session_state, Botan::secure_vector<uint8_t> &buf)
-    {
-        const unsigned kBufferSize = 1024;
-        PacketStack &packet_stack = session_state.packet_stack;
-        secure_vector<uint8_t> buf_in;
-        secure_vector<uint8_t> buf_out;
-        buf_in = buf;
-        for(size_t i = 0; i < packet_stack.packets.size(); i++)
-        {
-            while(!buf_in.empty())
-            {
-                packet_stack.packets[i]->Update(buf_in, buf_out);
-                if(!buf_in.empty() && packet_stack.packets[i]->GetPacketType() == PacketType::Header)
-                {
-                    // we have just finished header
-                    delete packet_stack.packets[i];
-                    packet_stack.packets[i] = CreatePacket(session_state, session_state.packet_header.packet_type);
-                }
-                else if(!buf_in.empty())
-                {
-                    // we have finished a packet, need a new header
-                    delete packet_stack.packets[i];
-                    packet_stack.packets[i] = new PacketHeaderPacket(session_state);
-                }
-            }
-            buf_in.swap(buf_out);
-        }
-        buf.swap(buf_in);
-    }
-
-}
 namespace LibEncryptMsg
 {
-    void PacketAnalyzer::Start()
+    class MessageWriterImpl
     {
-    }
-    void PacketAnalyzer::Start(const Passphrase &passphrase)
+        private:
+            std::unique_ptr<EncryptionKey> encryption_key_;
+            MessageConfig message_config_;
+            Salt salt_;
+            std::array<PacketType, kMaxPacketChainLength> packet_chain_;
+            PacketWriterFactory packet_writer_factory_;
+            bool write_esk_;
+
+            void WriteESK(OutStream &out);
+        public:
+            void Start(const SecureVector &passphrase, MessageConfig message_config, Salt salt);
+            void Start(std::unique_ptr<SecureVector> passphrase, MessageConfig message_config, Salt salt);
+
+            void Start(EncryptionKey encryption_key, MessageConfig message_config, Salt salt);
+            void Start(std::unique_ptr<EncryptionKey> encryption_key, MessageConfig message_config, Salt salt);
+
+            void Update(SecureVector& buf, bool finish);
+
+            const EncryptionKey &GetEncryptionKey() const;
+            const Salt &GetSalt() const;
+            const MessageConfig &GetMessageConfig() const;
+
+            MessageWriterImpl();
+    };
+
+    void MessageWriterImpl::Start(const SecureVector &passphrase, MessageConfig message_config, Salt salt)
     {
-    }
-    void PacketAnalyzer::Start(const EncryptionKey &encryption_key)
-    {
-    }
-    bool PacketAnalyzer::Update(const Botan::secure_vector<uint8_t> &buf, size_t offset)
-    {
-        return false;
-    }
-    void PacketAnalyzer::Finish(Botan::secure_vector<uint8_t> &buf, size_t offset)
-    {
-    }
-    const MessageParameters &PacketAnalyzer::GetMessageParameters() const
-    {
-        return message_parameters_;
-    }
-    const SecurityParameters &PacketAnalyzer::GetSecurityParameters() const
-    {
-        return security_parameters_;
+        if(salt.empty())
+            salt = GenerateRandomSalt();
+
+        std::unique_ptr<EncryptionKey> encryption_key = GenerateEncryptionKey(
+                Passphrase(passphrase),
+                message_config.GetCipherAlgo(),
+                message_config.GetHashAlgo(),
+                message_config.GetIterations(),
+                salt);
+        Start(std::move(encryption_key), message_config, salt);
     }
 
-    void MessageReader::Start(const Passphrase &passphrase)
+    void MessageWriterImpl::Start(std::unique_ptr<SecureVector> passphrase, MessageConfig message_config, Salt salt)
     {
-    }
-    void MessageReader::Start(const EncryptionKey &encryption_key)
-    {
-    }
-    void MessageReader::Update(Botan::secure_vector<uint8_t> &buf, size_t offset)
-    {
-    }
-    void MessageReader::Finish(Botan::secure_vector<uint8_t> &buf, size_t offset)
-    {
-    }
-    const MessageParameters &MessageReader::GetMessageParameters() const
-    {
-        return message_parameters_;
-    }
-    const SecurityParameters &MessageReader::GetSecurityParameters() const
-    {
-        return security_parameters_;
+        // Passphrase will be deleted after this method
+        Start(*passphrase, message_config, salt);
     }
 
-    void MessageWriter::Start(MessageParameters message_parameters, SecurityParameters security_parameters, const EncryptionKey &encryption_key)
+    void MessageWriterImpl::Start(EncryptionKey encryption_key, MessageConfig message_config, Salt salt)
     {
-    }
-    void MessageWriter::Update(Botan::secure_vector<uint8_t>& buf, size_t offset)
-    {
-    }
-    void MessageWriter::Finish(Botan::secure_vector<uint8_t>& buf, size_t offset)
-    {
-    }
-    const MessageParameters &MessageWriter::GetMessageParameters() const
-    {
-        return message_parameters_;
+        std::unique_ptr<EncryptionKey> uptr(new EncryptionKey(encryption_key));
+        Start(std::move(uptr), message_config, salt);
     }
 
-    // Generates an encryption key and update salt in security parameters if it was empty
-    EncryptionKey GenerateEncryptionKey(const Passphrase &passphrase, SecurityParameters &security_parameters)
+    void MessageWriterImpl::Start(std::unique_ptr<EncryptionKey> encryption_key, MessageConfig message_config, Salt salt)
     {
-        return EncryptionKey();
+        message_config_ = message_config;
+        salt_ = salt;
+        encryption_key_ = std::move(encryption_key);
+
+        auto it = packet_chain_.begin();
+        *it = PacketType::Literal;
+        if(message_config.GetCompression() != Compression::Uncompressed)
+            *++it = PacketType::Compressed;
+        *++it = PacketType::SymmetricIntegProtected;
     }
+
+    const EncryptionKey &MessageWriterImpl::GetEncryptionKey() const
+    {
+        return *encryption_key_;
+
+    }
+
+    const Salt &MessageWriterImpl::GetSalt() const
+    {
+        return salt_;
+    }
+
+    const MessageConfig &MessageWriterImpl::GetMessageConfig() const
+    {
+        return message_config_;
+    }
+
+    void MessageWriterImpl::WriteESK(OutStream &out)
+    {
+        if(!write_esk_)
+            return;
+        WriteSymmetricKeyESK(message_config_, salt_, out);
+        write_esk_ = false;
+    }
+
+    void MessageWriterImpl::Update(SecureVector& buf, bool finish)
+    {
+        assert(encryption_key_);
+        SecureVector target_buf;
+        auto target_stm = MakeOutStream(target_buf);
+        WriteESK(*target_stm);
+
+        SecureVector temp_buf;
+        temp_buf.swap(buf);
+        auto temp_out = MakeOutStream(temp_buf);
+        auto it = packet_chain_.begin();
+        for(;it != packet_chain_.end() && *it != PacketType::Unknown; it++)
+        {
+            auto *packet_writer = packet_writer_factory_.GetOrCreate(*it, message_config_, salt_, *encryption_key_);
+            packet_writer->GetInStream().Push(temp_buf);
+            temp_out->Reset();
+            if(!finish)
+                packet_writer->Write(*temp_out);
+            else
+                packet_writer->Finish(*temp_out);
+        }
+
+        target_stm->Write(temp_buf.data(), temp_buf.size());
+        buf.swap(target_buf);
+    }
+
+    MessageWriterImpl::MessageWriterImpl():
+        write_esk_(true)
+    {
+        packet_chain_.fill(PacketType::Unknown);
+    }
+
+    // MessageWriter
+    void MessageWriter::Start(const SecureVector &passphrase, MessageConfig message_config, Salt salt)
+    {
+        impl_->Start(passphrase, message_config, salt);
+    }
+
+    void MessageWriter::Start(std::unique_ptr<SecureVector> passphrase, MessageConfig message_config,
+            Salt salt)
+    {
+        impl_->Start(std::move(passphrase), message_config, salt);
+    }
+
+    void MessageWriter::Start(EncryptionKey encryption_key, MessageConfig message_config, Salt salt)
+    {
+        impl_->Start(encryption_key, message_config, salt);
+    }
+
+    void MessageWriter::Start(std::unique_ptr<EncryptionKey> encryption_key, MessageConfig message_config, Salt salt)
+    {
+        impl_->Start(std::move(encryption_key), message_config, salt);
+    }
+
+    void MessageWriter::Update(SecureVector& buf)
+    {
+        impl_->Update(buf, false); //finish = false
+    }
+
+    void MessageWriter::Finish(SecureVector& buf)
+    {
+        impl_->Update(buf, true); //finish = true
+    }
+
+    const EncryptionKey &MessageWriter::GetEncryptionKey() const
+    {
+        return impl_->GetEncryptionKey();
+    }
+
+    const Salt &MessageWriter::GetSalt() const
+    {
+        return impl_->GetSalt();
+    }
+
+    const MessageConfig &MessageWriter::GetMessageConfig() const
+    {
+        return impl_->GetMessageConfig();
+    }
+
+    MessageWriter::MessageWriter()
+        :impl_(new MessageWriterImpl()){};
+
+    MessageWriter::~MessageWriter()
+    {
+        delete impl_;
+    }
+
 }

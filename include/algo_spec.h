@@ -5,6 +5,7 @@ namespace LibEncryptMsg
 {
     enum class Compression
     {
+        Unknown = -1,
         Uncompressed = 0,
         ZIP = 1,
         ZLIB = 2,
@@ -32,8 +33,8 @@ namespace LibEncryptMsg
     {
         CipherAlgo cipher_algo;
         std::string botan_name;
-        int block_size;
-        int key_size;
+        unsigned block_size;
+        unsigned key_size;
     };
 
     struct HashSpec
@@ -42,8 +43,15 @@ namespace LibEncryptMsg
         std::string botan_name;
     };
 
+    struct CompressionSpec
+    {
+        Compression compression;
+        std::string botan_name;
+    };
+
     const AlgoSpec &GetAlgoSpec(CipherAlgo cipher_algo);
     const HashSpec &GetHashSpec(HashAlgo hash_algo);
+    const CompressionSpec &GetCompressionSpec(Compression compression);
 
     const HashAlgo kDefaultHashAlgo = HashAlgo::SHA256;
     const CipherAlgo kDefaultCipherAlgo = CipherAlgo::AES256;

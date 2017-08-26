@@ -54,8 +54,8 @@ namespace LibEncryptMsg
                 {
                     CipherAlgo::Unknown,
                     "",
-                    -1,
-                    -1
+                    0,
+                    0
                 };
                 return unknown;
         }
@@ -90,6 +90,41 @@ namespace LibEncryptMsg
                 static HashSpec unknown =
                 {
                     HashAlgo::Unknown,
+                    ""
+                };
+                return unknown;
+        }
+    }
+
+    const CompressionSpec &GetCompressionSpec(Compression compression)
+    {
+        switch(compression)
+        {
+            case Compression::ZIP:
+                static CompressionSpec zip =
+                {
+                    Compression::ZIP,
+                    "deflate"
+                };
+                return zip;
+            case Compression::ZLIB:
+                static CompressionSpec zlib =
+                {
+                    Compression::ZLIB,
+                    "zlib"
+                };
+                return zlib;
+            case Compression::BZip2:
+                static CompressionSpec bzip2 =
+                {
+                    Compression::BZip2,
+                    "bz2"
+                };
+                return bzip2;
+            default:
+                static CompressionSpec unknown =
+                {
+                    Compression::Unknown,
                     ""
                 };
                 return unknown;
