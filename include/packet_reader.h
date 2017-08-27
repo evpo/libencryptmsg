@@ -2,7 +2,6 @@
 #include <memory>
 #include <map>
 #include <utility>
-#include "message_parameters.h"
 #include "memory_stream.h"
 #include "packet_parsers.h"
 

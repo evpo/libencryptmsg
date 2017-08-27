@@ -8,6 +8,7 @@
 #include "algo_spec.h"
 #include "openpgp_conversions.h"
 #include "emsg_symmetric_key.h"
+#include "emsg_constants.h"
 
 using namespace std;
 using namespace LightStateMachine;

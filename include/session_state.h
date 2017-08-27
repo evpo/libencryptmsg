@@ -5,7 +5,6 @@
 #include <memory>
 #include "botan/secmem.h"
 #include "utility.h"
-#include "message_parameters.h"
 #include "packet_parsers.h"
 #include "packet_reader.h"
 #include "emsg_utility.h"

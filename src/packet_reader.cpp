@@ -9,6 +9,7 @@
 #include "session_state.h"
 #include "openpgp_conversions.h"
 #include "message_encryption.h"
+#include "emsg_constants.h"
 
 using namespace std;
 namespace LibEncryptMsg

@@ -1,4 +1,5 @@
 #include "session_state.h"
+#include "emsg_constants.h"
 
 namespace LibEncryptMsg
 {

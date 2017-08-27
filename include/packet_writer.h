@@ -1,6 +1,5 @@
 #pragma once
 #include <map>
-#include "message_parameters.h"
 #include "message_config.h"
 #include "memory_stream.h"
 #include "packet_parsers.h"

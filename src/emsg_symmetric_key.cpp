@@ -1,7 +1,7 @@
 #include "emsg_symmetric_key.h"
 #include "botan/auto_rng.h"
 #include "botan/pbkdf.h"
-#include "message_parameters.h"
+#include "emsg_constants.h"
 #include "openpgp_conversions.h"
 
 namespace LibEncryptMsg
