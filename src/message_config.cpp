@@ -1,4 +1,6 @@
 #include "message_config.h"
+#include "emsg_constants.h"
+#include "openpgp_conversions.h"
 
 namespace LibEncryptMsg
 {
@@ -77,14 +79,14 @@ namespace LibEncryptMsg
     }
 
     MessageConfig::MessageConfig():
-            cipher_algo_(CipherAlgo::AES256),
-            hash_algo_(HashAlgo::SHA256),
-            iterations_(0xFE),
-            compression_(Compression::ZIP),
+            cipher_algo_(kDefaultCipherAlgo),
+            hash_algo_(kDefaultHashAlgo),
+            iterations_(EncodeS2KIterations(kDefaultIterations)),
+            compression_(kDefaultCompression),
             file_name_(""),
             file_date_(0),
-            binary_(true),
-            partial_length_power_(4)
+            binary_(kDefaultBinary),
+            partial_length_power_(kDefaultPartialLengthPower)
     {
     }
 }

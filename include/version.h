@@ -12,6 +12,6 @@
 #define VER_LEGALTRADEMARKS1_STR    "All Rights Reserved"
 #define VER_LEGALTRADEMARKS2_STR    VER_LEGALTRADEMARKS1_STR
 #define VER_ORIGINALFILENAME_STR    ""
-#define VER_PRODUCTNAME_STR         "CppProject"
+#define VER_PRODUCTNAME_STR         "libEncryptMsg"
 
 #define VER_COMPANYDOMAIN_STR       ""

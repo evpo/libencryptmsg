@@ -1,5 +1,6 @@
 #include "packet_writer.h"
 #include <memory>
+#include "assert.h"
 #include "botan/compression.h"
 #include "botan/sha160.h"
 #include "botan/cipher_mode.h"

@@ -1,8 +1,4 @@
 #pragma once
-#include <vector>
-#include <stack>
-#include <string>
-#include <memory>
 #include "utility.h"
 
 namespace LibEncryptMsg

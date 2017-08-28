@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include <memory>
 #include "emsg_types.h"
 #include "passphrase_provider.h"

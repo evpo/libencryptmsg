@@ -1,9 +1,5 @@
 #pragma once
-#include <string>
 #include <vector>
-#include "emsg_mem.h"
-#include "algo_spec.h"
-#include "botan/secmem.h"
 #include "botan/symkey.h"
 
 namespace LibEncryptMsg
@@ -38,8 +34,6 @@ namespace LibEncryptMsg
     };
 
     using FileDate = unsigned;
-
     using Salt = std::vector<uint8_t>;
-
     using EncryptionKey = Botan::SymmetricKey;
 }

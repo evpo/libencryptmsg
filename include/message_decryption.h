@@ -7,6 +7,7 @@
 #include "emsg_mem.h"
 #include "passphrase_provider.h"
 #include "message_config.h"
+#include "algo_spec.h"
 
 namespace LibEncryptMsg
 {

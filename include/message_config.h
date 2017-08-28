@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
-#include "emsg_types.cpp"
+#include "algo_spec.h"
+#include "emsg_types.h"
 
 namespace LibEncryptMsg
 {

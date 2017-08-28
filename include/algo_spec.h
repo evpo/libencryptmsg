@@ -52,10 +52,4 @@ namespace LibEncryptMsg
     const AlgoSpec &GetAlgoSpec(CipherAlgo cipher_algo);
     const HashSpec &GetHashSpec(HashAlgo hash_algo);
     const CompressionSpec &GetCompressionSpec(Compression compression);
-
-    const HashAlgo kDefaultHashAlgo = HashAlgo::SHA256;
-    const CipherAlgo kDefaultCipherAlgo = CipherAlgo::AES256;
-    const int kDefaultIterations = 1015808;
-    const int kMaxIterations = 65011712;
-    const Compression kDefaultCompression = Compression::ZLIB;
 }

@@ -4,6 +4,7 @@
 #include <utility>
 #include "memory_stream.h"
 #include "packet_parsers.h"
+#include "emsg_types.h"
 
 namespace LibEncryptMsg
 {

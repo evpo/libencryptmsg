@@ -43,6 +43,8 @@ namespace
 
             std::unique_ptr<SecureVector> GetPassphrase(std::string description, bool &canceled) override
             {
+                (void)description;
+                canceled = false;
                 return std::unique_ptr<SecureVector>(new SecureVector(ReadFile(pwd_file_)));
             }
     };

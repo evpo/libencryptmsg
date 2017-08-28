@@ -20,4 +20,4 @@ $(TARGETDIR)/% : %
 	cp "$<" "$@"
 
 clean::
-	rm $(TARGETFILES)
+	rm -f $(TARGETFILES)

@@ -409,6 +409,8 @@ namespace
 
     std::unique_ptr<SecureVector> KnownPassphraseProvider::GetPassphrase(std::string description, bool &canceled)
     {
+        (void)description;
+        canceled = false;
         std::unique_ptr<SecureVector> ret_val;
         if(passphrase_data_->size() == 0)
             return ret_val;
@@ -426,6 +428,12 @@ namespace
     std::unique_ptr<EncryptionKey> KnownKeyProvider::GetKey(CipherAlgo cipher_algo, HashAlgo hash_algo, uint8_t iterations, Salt salt,
             std::string description, bool &canceled)
     {
+        (void)cipher_algo;
+        (void)hash_algo;
+        (void)iterations;
+        (void)salt;
+        (void)description;
+        canceled = false;
         return std::unique_ptr<EncryptionKey>(new EncryptionKey(*key_));
     }
 }

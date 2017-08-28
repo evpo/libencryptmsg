@@ -2,6 +2,8 @@
 #include <memory>
 #include <string>
 #include "emsg_types.h"
+#include "algo_spec.h"
+#include "emsg_mem.h"
 
 namespace LibEncryptMsg
 {

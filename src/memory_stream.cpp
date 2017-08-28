@@ -1,13 +1,10 @@
 #include "memory_stream.h"
+#include "assert.h"
 #include "packet_parsers.h"
-#include "emsg_mem.h"
-
-
-using SecureVector=Botan::secure_vector<uint8_t>;
+#include "emsg_constants.h"
 
 namespace LibEncryptMsg
 {
-
     std::unique_ptr<OutStream> MakeOutStream(Botan::secure_vector<uint8_t> &cnt)
     {
         std::unique_ptr<OutStream> ret_val(new OutStream(cnt));

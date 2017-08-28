@@ -1,5 +1,4 @@
 #include "context.h"
-#include "assert.h"
 
 using namespace LibEncryptMsg;
 
