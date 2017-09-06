@@ -1,4 +1,4 @@
-include ../deps/makefiles/platform.mak
+#include ../deps/makefiles/platform.mak
 
 LIBRARIES += ../src ../deps/stlplus/subsystems ../deps/stlplus/containers ../deps/stlplus/portability
 
@@ -11,11 +11,14 @@ CXXFLAGS += -I../include -I../deps/plog/include -I/usr/include/botan-2
 LDFLAGS += -Wall
 LOADLIBES += -lm -lbotan-2
 
-ifeq ($(RELEASE),on)
-TARGETDIR := ../../bin/release
-else
-TARGETDIR := ../../bin/debug
-endif
+#ifeq ($(RELEASE),on)
+#TARGETDIR := ../../bin/release
+#else
+#TARGETDIR := ../../bin/debug
+#endif
 
-IMAGENAME := $(TARGETDIR)/encryptmsg
+BINDIR := ../bin
+BINFORM := variant
+IMAGENAME := encryptmsg
+#IMAGENAME := $(TARGETDIR)/encryptmsg
 include ../deps/makefiles/gcc.mak
