@@ -1,3 +1,9 @@
+//**********************************************************************************
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
+//<http://www.evpo.net/encryptpad>
+//
+//libencryptmsg is released under the Simplified BSD License (see license.txt)
+//**********************************************************************************
 #pragma once
 #include "emsg_mem.h"
 #include "emsg_utility.h"
@@ -10,8 +16,8 @@ namespace LibEncryptMsg
     {
         private:
             size_t count_;
-            SecureVector buffer_;
-            SecureVector length_buffer_;
+            SafeVector buffer_;
+            SafeVector length_buffer_;
             uint8_t *begin_;
             uint8_t *end_;
             uint8_t *pos_;
@@ -21,7 +27,7 @@ namespace LibEncryptMsg
 
             void SetPartialCount(size_t count);
 
-            SecureVector::const_iterator ReadLength(SecureVector::const_iterator it, SecureVector::const_iterator end);
+            SafeVector::const_iterator ReadLength(SafeVector::const_iterator it, SafeVector::const_iterator end);
 
             // Reads from the source directly without updating counters.
             size_t ReadFromSource(uint8_t *out_it, size_t length);
@@ -35,7 +41,7 @@ namespace LibEncryptMsg
 
             size_t GetCount() const;
 
-            void Push(SecureVector &buf);
+            void Push(SafeVector &buf);
 
             bool IsEOF() const;
 
@@ -49,17 +55,17 @@ namespace LibEncryptMsg
     class OutStream : public NonCopyableNonMovable
     {
     private:
-        SecureVector &out_;
+        SafeVector &out_;
         uint8_t *ptr_;
         void Resize(size_t size);
     public:
-        OutStream(SecureVector &out);
+        OutStream(SafeVector &out);
         void Reset();
         bool Put(uint8_t b);
         bool Write(const uint8_t *in_it, size_t bytes2write);
     };
 
-    std::unique_ptr<OutStream> MakeOutStream(SecureVector &cnt);
+    std::unique_ptr<OutStream> MakeOutStream(SafeVector &cnt);
 
-    void AppendToBuffer(InBufferStream &stm, SecureVector &buf);
+    void AppendToBuffer(InBufferStream &stm, SafeVector &buf);
 }

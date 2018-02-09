@@ -1,3 +1,9 @@
+//**********************************************************************************
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
+//<http://www.evpo.net/encryptpad>
+//
+//libencryptmsg is released under the Simplified BSD License (see license.txt)
+//**********************************************************************************
 #include "state_handlers.h"
 #include <algorithm>
 #include "plog/Log.h"
@@ -6,23 +12,32 @@
 
 using namespace std;
 using namespace LightStateMachine;
-using namespace LightStateMachine::Client;
+
 
 namespace LibEncryptMsg
 {
-    bool InitCanEnter(Context &context)
+    Context &ToContext(StateMachineContext &ctx)
     {
+        StateMachineContext *p = &ctx;
+        return *(static_cast<Context*>(p));
+    }
+
+    bool InitCanEnter(StateMachineContext &ctx)
+    {
+        Context &context = ToContext(ctx);
         return !context.State().buffer_stack.empty() || context.State().finish_packets;
     }
 
-    void InitOnEnter(Context &context)
+    void InitOnEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         auto &state = context.State();
         state.packet_chain_it = state.packet_chain.begin();
     }
 
-    bool HeaderCanEnter(Context &context)
+    bool HeaderCanEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         if(context.State().buffer_stack.empty() ||
                 context.State().buffer_stack.top().empty())
             return false;
@@ -34,29 +49,31 @@ namespace LibEncryptMsg
         return true;
     }
 
-    bool HeaderCanExit(Context &context)
+    bool HeaderCanExit(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         auto &state = context.State();
-        switch(state.packet_result)
+        switch(state.emsg_result)
         {
-            case PacketResult::Success:
-            case PacketResult::Pending:
+            case EmsgResult::Success:
+            case EmsgResult::Pending:
                 return true;
             default:
                 return false;
         }
     }
 
-    void HeaderOnEnter(Context &context)
+    void HeaderOnEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         auto &state = context.State();
         auto &reader = state.packet_factory.GetHeaderReader();
         reader.GetInStream().Push(state.buffer_stack.top());
         state.buffer_stack.pop();
-        state.packet_result = reader.Read(state.finish_packets);
-        switch(state.packet_result)
+        state.emsg_result = reader.Read(state.finish_packets);
+        switch(state.emsg_result)
         {
-            case PacketResult::Success:
+            case EmsgResult::Success:
                 {
                     if(reader.GetInStream().GetCount() > 0)
                     {
@@ -67,7 +84,7 @@ namespace LibEncryptMsg
                     LOG_DEBUG << "Header: " << GetPacketSpec(reader.GetPacketHeader().packet_type).packet_name;
                 }
                 break;
-            case PacketResult::Pending:
+            case EmsgResult::Pending:
                 break;
             default:
                 context.SetFailed(true);
@@ -76,21 +93,23 @@ namespace LibEncryptMsg
     }
 
 
-    bool PacketCanExit(Context &context)
+    bool PacketCanExit(StateMachineContext &ctx)
     {
-        auto result = context.State().packet_result;
+        Context &context = ToContext(ctx);
+        auto result = context.State().emsg_result;
         switch(result)
         {
-            case PacketResult::Success:
-            case PacketResult::Pending:
+            case EmsgResult::Success:
+            case EmsgResult::Pending:
                 return true;
             default:
                 return false;
         }
     }
 
-    bool PacketCanEnter(Context &context)
+    bool PacketCanEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         if(context.State().buffer_stack.empty() && !context.State().finish_packets)
             return false;
 
@@ -101,8 +120,9 @@ namespace LibEncryptMsg
         return true;
     }
 
-    void PacketOnEnter(Context &context)
+    void PacketOnEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         auto &state = context.State();
         auto packet_chain_it = state.packet_chain_it;
         LOG_DEBUG << "Packet: " << GetPacketSpec(*packet_chain_it).packet_name;
@@ -139,10 +159,10 @@ namespace LibEncryptMsg
             buffer_stack.pop();
         }
 
-        state.packet_result = packet.Read(*out_stm);
-        switch(state.packet_result)
+        state.emsg_result = packet.Read(*out_stm);
+        switch(state.emsg_result)
         {
-            case PacketResult::Success:
+            case EmsgResult::Success:
                 *state.packet_chain_it = PacketType::Unknown;
                 if(packet.GetInStream().GetCount() > 0)
                 {
@@ -150,7 +170,7 @@ namespace LibEncryptMsg
                     AppendToBuffer(packet.GetInStream(), buffer_stack.top());
                 }
                 break;
-            case PacketResult::Pending:
+            case EmsgResult::Pending:
                 break;
             default:
                 context.SetFailed(true);
@@ -169,7 +189,7 @@ namespace LibEncryptMsg
                 state.packet_chain_it++;
             assert(state.packet_chain.end() != state.packet_chain_it);
         }
-        else if (state.packet_result == PacketResult::Success)
+        else if (state.emsg_result == EmsgResult::Success)
         {
             auto it = state.packet_chain.begin();
             for(;it != state.packet_chain.end() && *it != PacketType::Unknown; it++)
@@ -179,38 +199,43 @@ namespace LibEncryptMsg
         }
     }
 
-    bool FinishCanEnter(Context &context)
+    bool FinishCanEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         if(*context.State().packet_chain_it == PacketType::Unknown)
             return false;
 
         return context.State().finish_packets;
     }
 
-    bool FinishCanExit(Context &context)
+    bool FinishCanExit(StateMachineContext &ctx)
     {
-        return context.State().packet_result == PacketResult::Success;
+        Context &context = ToContext(ctx);
+        return context.State().emsg_result == EmsgResult::Success;
     }
 
-    void FinishOnEnter(Context &context)
+    void FinishOnEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         auto &state = context.State();
         auto packet_pair = state.packet_factory.GetOrCreatePacket(*state.packet_chain_it);
         assert(packet_pair.first);
         assert(!packet_pair.second);
 
-        state.packet_result = packet_pair.first->Finish();
+        state.emsg_result = packet_pair.first->Finish();
         *state.packet_chain_it = PacketType::Unknown;
         state.packet_chain_it ++;
     }
 
-    bool BufferEmptyCanEnter(Context &context)
+    bool BufferEmptyCanEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         return context.State().buffer_stack.empty() || !context.State().finish_packets;
     }
 
-    void BufferEmptyOnEnter(Context &context)
+    void BufferEmptyOnEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         auto &packet_chain = context.State().packet_chain;
         context.State().packet_chain_it = *packet_chain.begin() == PacketType::Unknown
             ? packet_chain.end() : packet_chain.begin();
@@ -218,11 +243,18 @@ namespace LibEncryptMsg
             context.State().buffer_stack.pop();
     }
 
-    bool EndCanEnter(Context &context)
+    bool EndCanEnter(StateMachineContext &ctx)
     {
+        Context &context = ToContext(ctx);
         auto &state = context.State();
-        if(state.finish_packets && *state.packet_chain_it != PacketType::Unknown)
+        if(state.finish_packets && !std::all_of(state.packet_chain.begin(), state.packet_chain.end(),
+                    [](PacketType packet_type)
+                    {
+                        return packet_type == PacketType::Unknown;
+                    }))
+        {
             return false;
+        }
 
         return state.buffer_stack.empty();
     }

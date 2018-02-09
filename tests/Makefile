@@ -1,16 +1,18 @@
 include ../deps/makefiles/platform.mak
 
-LIBRARIES += ../src
+LIBRARIES += ../src ../deps/state_machine
 LDFLAGS += -Wl,--whole-archive
-LOADLIBES += -Wl,--no-whole-archive
+LDLIBS += -Wl,--no-whole-archive
 
 ifeq ($(RELEASE),on)
 CXXFLAGS += -ggdb
 endif
 
-LOADLIBES += ../deps/gtest/googletest/build/libgtest.a -lbotan-2 -lpthread -lm
+BOTANLIB := $(shell pkg-config --libs botan-2)
+BOTANCXX := $(shell pkg-config --cflags botan-2)
+LDLIBS += ../deps/gtest/googletest/build/libgtest.a $(BOTANLIB) -lpthread -lm
 CXXFLAGS += -I../deps/gtest/googletest/include -pthread -std=c++11 -Wall -Wextra
-CXXFLAGS += -I../include -I../include/internal -I../deps/stlplus/containers -I../deps/plog/include -I/usr/include/botan-2
+CXXFLAGS += -I../include/encryptmsg -I../include/internal -I../deps/stlplus/containers -I../deps/plog/include $(BOTANCXX)
 
 LDFLAGS += -Wall
 

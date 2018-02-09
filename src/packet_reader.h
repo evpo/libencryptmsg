@@ -1,3 +1,9 @@
+//**********************************************************************************
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
+//<http://www.evpo.net/encryptpad>
+//
+//libencryptmsg is released under the Simplified BSD License (see license.txt)
+//**********************************************************************************
 #pragma once
 #include <memory>
 #include <map>
@@ -17,19 +23,24 @@ namespace LibEncryptMsg
         SessionState &state_;
         bool is_final_packet_;
 
-        virtual PacketResult DoRead(OutStream &out) = 0;
-        virtual PacketResult DoFinish() = 0;
+        virtual EmsgResult DoRead(OutStream &out) = 0;
+        virtual EmsgResult DoFinish() = 0;
     public:
         PacketRWBase(SessionState &state, bool is_final_packet)
             :state_(state), is_final_packet_(is_final_packet){}
+
+        virtual ~PacketRWBase(){}
+        PacketRWBase(const PacketRWBase&) = delete;
+        PacketRWBase &operator=(const PacketRWBase&) = delete;
+
         // Reads packet body and writes its payload while setting metadata_out fields
         // Payload is the contained packets or empty if there are no packets inside
-        PacketResult Read(OutStream &out)
+        EmsgResult Read(OutStream &out)
         {
             return DoRead(out);
         }
 
-        PacketResult Finish()
+        EmsgResult Finish()
         {
             return DoFinish();
         }
@@ -56,7 +67,7 @@ namespace LibEncryptMsg
                 return in_stm_;
             }
 
-            PacketResult Read(bool finish_packets);
+            EmsgResult Read(bool finish_packets);
 
             PacketHeader &GetPacketHeader()
             {

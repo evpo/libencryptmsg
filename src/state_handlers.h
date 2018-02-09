@@ -1,29 +1,33 @@
+//**********************************************************************************
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
+//<http://www.evpo.net/encryptpad>
+//
+//libencryptmsg is released under the Simplified BSD License (see license.txt)
+//**********************************************************************************
 //
 // Handlers to various events occurring in the state machine
 //
 #pragma once
 #include "context.h"
 
-#define Context LightStateMachine::Client::Context
 namespace LibEncryptMsg
 {
-    bool InitCanEnter(Context &context);
-    void InitOnEnter(Context &context);
+    bool InitCanEnter(LightStateMachine::StateMachineContext &context);
+    void InitOnEnter(LightStateMachine::StateMachineContext &context);
 
-    bool EndCanEnter(Context &context);
+    bool EndCanEnter(LightStateMachine::StateMachineContext &context);
 
-    void HeaderOnEnter(Context &context);
-    void PacketOnEnter(Context &context);
-    void BufferEmptyOnEnter(Context &context);
+    void HeaderOnEnter(LightStateMachine::StateMachineContext &context);
+    void PacketOnEnter(LightStateMachine::StateMachineContext &context);
+    void BufferEmptyOnEnter(LightStateMachine::StateMachineContext &context);
 
-    bool HeaderCanEnter(Context &context);
-    bool PacketCanEnter(Context &context);
-    bool PacketCanExit(Context &context);
+    bool HeaderCanEnter(LightStateMachine::StateMachineContext &context);
+    bool PacketCanEnter(LightStateMachine::StateMachineContext &context);
+    bool PacketCanExit(LightStateMachine::StateMachineContext &context);
 
-    bool FinishCanEnter(Context &context);
-    bool FinishCanExit(Context &context);
-    void FinishOnEnter(Context &context);
+    bool FinishCanEnter(LightStateMachine::StateMachineContext &context);
+    bool FinishCanExit(LightStateMachine::StateMachineContext &context);
+    void FinishOnEnter(LightStateMachine::StateMachineContext &context);
 
-    bool BufferEmptyCanEnter(Context &context);
+    bool BufferEmptyCanEnter(LightStateMachine::StateMachineContext &context);
 }
-#undef Context

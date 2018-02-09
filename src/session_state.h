@@ -1,3 +1,9 @@
+//**********************************************************************************
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
+//<http://www.evpo.net/encryptpad>
+//
+//libencryptmsg is released under the Simplified BSD License (see license.txt)
+//**********************************************************************************
 #pragma once
 #include <vector>
 #include <stack>
@@ -24,10 +30,10 @@ namespace LibEncryptMsg
         std::unique_ptr<EncryptionKey> encryption_key;
         // Stack of buffer that should be processed from top onwards
         // The invariant is that there are no empty buffers. If a buffer is empty, it should be popped.
-        std::stack<SecureVector > buffer_stack;
-        SecureVector output;
+        std::stack<SafeVector> buffer_stack;
+        SafeVector output;
         PacketFactory packet_factory;
-        PacketResult packet_result;
+        EmsgResult emsg_result;
         bool is_message_analyzed;
         bool finish_packets;
 

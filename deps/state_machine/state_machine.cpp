@@ -1,3 +1,9 @@
+//**********************************************************************************
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
+//<http://www.evpo.net/encryptpad>
+//
+//LightStateMachine is released under the Simplified BSD License (see license.txt)
+//**********************************************************************************
 #include "state_machine.h"
 #include <vector>
 #include <string>
@@ -9,35 +15,55 @@
 #endif
 
 using namespace std;
-using namespace LightStateMachine::Client;
 
 namespace
 {
 #ifdef TRACE_STATE_MACHINE
-    void DebugPrintState(StateID state_id)
+    void DebugPrintState(std::string state_machine_name, std::string str)
     {
-        string str = PrintStateID(state_id);
-        LOG_DEBUG << str;
+        LOG_DEBUG << "SM:" << state_machine_name << ": " << str;
     }
 #else
-    void DebugPrintState(StateID)
+    void DebugPrintState(std::string state_machine_name, std::string str)
     {
     }
 #endif
 }
 
+
 namespace LightStateMachine
 {
 
     unsigned kQueueSize = 3U;
-    StateMachine::StateMachine(StateGraph &state_graph, StateGraph::iterator start_state, StateGraph::iterator fail_state, Context &context)
+
+    class StandardStateIDToStringConverter : public StateIDToStringConverter
+    {
+        public:
+            std::string Convert(StateMachineStateID state_id) override
+            {
+                return std::string("state_id = ") + std::to_string(state_id);
+            }
+
+            std::string StateMachineName() override
+            {
+                return "default";
+            }
+    };
+
+    StateMachine::StateMachine(StateGraph &state_graph, StateGraph::iterator start_state, StateGraph::iterator fail_state, StateMachineContext &context)
         :
             state_graph_(&state_graph),
             start_state_(start_state),
             current_state_(start_state),
             fail_state_(fail_state),
-            context_(&context)
+            context_(&context),
+            state_id_to_string_converter_(new StandardStateIDToStringConverter())
     {
+    }
+
+    void StateMachine::SetStateIDToStringConverter(std::unique_ptr<StateIDToStringConverter> converter)
+    {
+        state_id_to_string_converter_ = std::move(converter);
     }
 
     void StateMachine::Reset()
@@ -80,7 +106,7 @@ namespace LightStateMachine
         return true;
     }
 
-    StateID StateMachine::CurrentState() const
+    StateMachineStateID StateMachine::CurrentState() const
     {
         return current_state_->GetID();
     }
@@ -93,10 +119,12 @@ namespace LightStateMachine
             state_queue_.pop();
         }
         current_state_ = new_state;
-        DebugPrintState(current_state_->GetID());
+#ifdef TRACE_STATE_MACHINE
+        DebugPrintState(state_id_to_string_converter_->StateMachineName(), state_id_to_string_converter_->Convert(current_state_->GetID()));
+#endif
     }
 
-    StateID StateMachine::PreviousState() const
+    StateMachineStateID StateMachine::PreviousState() const
     {
         return state_queue_.back();
     }

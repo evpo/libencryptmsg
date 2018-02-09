@@ -22,7 +22,7 @@
 ################################################################################
 
 # start by identifying the operating system
-OS     := $(shell uname -o)
+OS     := $(shell uname -o 2>/dev/null || uname)
 
 # on most platforms "uname -m" gives the CPU name
 # However, see below for situations where this is overridden
@@ -117,11 +117,7 @@ endif # GCOV
 endif # GPROF
 endif # RELEASE
 
-################################################################################
 # define the name of the subdirectory so that different builds have different subdirectories
-
 SUBDIR := $(BUILD)-$(VARIANT)
 
 ################################################################################
-
-

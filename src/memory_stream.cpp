@@ -1,3 +1,9 @@
+//**********************************************************************************
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
+//<http://www.evpo.net/encryptpad>
+//
+//libencryptmsg is released under the Simplified BSD License (see license.txt)
+//**********************************************************************************
 #include "memory_stream.h"
 #include "assert.h"
 #include "packet_parsers.h"
@@ -70,11 +76,11 @@ namespace LibEncryptMsg
         stm.Read(buf.data(), stm.GetCount());
     }
 
-    SecureVector::const_iterator InBufferStream::ReadLength(SecureVector::const_iterator it, SecureVector::const_iterator end)
+    SafeVector::const_iterator InBufferStream::ReadLength(SafeVector::const_iterator it, SafeVector::const_iterator end)
     {
         assert(static_cast<size_t>(end - it) >= 5U);
         // TODO: Add ReadLength overload to read from iterators so we don't need to make a temp buffer
-        SecureVector buf(it, it + 5U);
+        SafeVector buf(it, it + 5U);
         InBufferStream stm;
         stm.Push(buf);
         bool is_partial = false;
@@ -143,7 +149,10 @@ namespace LibEncryptMsg
         {
             size_t bytes2take = std::min(static_cast<size_t>(buf.cend() - it), GetPartialCount());
             buffer_.insert(buffer_.end(), it, it + bytes2take);
-            SetPartialCount(GetPartialCount() - bytes2take);
+
+            if(GetPartialLength())
+                SetPartialCount(GetPartialCount() - bytes2take);
+
             it += bytes2take;
             if(!GetPartialCount() && GetPartialLength())
             {
@@ -162,6 +171,7 @@ namespace LibEncryptMsg
                     length_buffer_.clear();
                 }
             }
+
             assert(GetPartialCount() || it == buf.cend() || bytes2take);
         }
 

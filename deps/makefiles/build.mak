@@ -15,12 +15,12 @@
 
 ifeq ($(PLATFORM),SOLARIS)
 # have to explicitly pull in the socket library
-LOADLIBES += -lsocket
+LDLIBS += -lsocket
 endif
 
 ifeq ($(PLATFORM),NETBSD)
 # have to explicitly state that the maths library should be included
-LOADLIBES += -lm
+LDLIBS += -lm
 endif
 
 ifeq ($(BUILD),LINUX-alpha)
@@ -35,22 +35,41 @@ endif
 
 ifeq ($(PLATFORM),MINGW)
 # need to explicitly add the Windows sockets 2 library
-LOADLIBES += -lWs2_32
+LDLIBS += -lWs2_32
 # gcc handling of DLLs on Windows
 LDFLAGS += -Wl,--enable-auto-import
+# $(CC) is used for C compiles and link operations. This defaults to cc which on most platforms then maps to gcc
+# However, MinGW platforms do not have a mapping from cc to gcc so builds fail. This is a work-round of this problem
+CC := gcc
 endif
 
+ifeq ($(PLATFORM),MACOS)
+CXX := clang -m64
+endif
+
+# need to build PIC on some platforms in order to use code in shared libraries
+# Note: I use PIC in all compiles on these platforms assuming that the historic lower performance of PIC is now negligible
 ifeq ($(PLATFORM),GNULINUX)
-# need to build PIC in order to use code in shared libraries
+CFLAGS += -fPIC
+CXXFLAGS += -fPIC
+else ifeq ($(PLATFORM),FREEBSD)
+CFLAGS += -fPIC
+CXXFLAGS += -fPIC
+else ifeq ($(PLATFORM),NETBSD)
+CFLAGS += -fPIC
+CXXFLAGS += -fPIC
+else ifeq ($(PLATFORM),OPENBSD)
 CFLAGS += -fPIC
 CXXFLAGS += -fPIC
 endif
 
+# manage switch between static and dynamic linking of runtime library
 ifeq ($(STATIC),on)
 # switch on static linking with C/C++ runtimes
 LDFLAGS += -static-libgcc -static-libstdc++
 else
-LOADLIBES += -lstdc++
+# dynamic linking options - create a linker dependency on C++ runtime
+LDLAST += -lstdc++
 endif
 
 ################################################################################
@@ -198,7 +217,7 @@ build:: $(LIBRARY) $(ARCHIVE_LIBRARIES) $(IMAGE) $(SHARED_SO)
 $(SUBDIR)/%.o: %.cpp
 	@echo "$(LIBNAME):$(SUBDIR): C++ compiling $<"
 	@mkdir -p $(SUBDIR)
-	@$(CXX) -x c++ -c -MMD $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES) $< -o $@
+	$(CXX) -x c++ -c -MMD $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 # the rule for compiling a C source file
 $(SUBDIR)/%.o: %.c
@@ -250,8 +269,8 @@ $(SHARED_SO): $(LIBRARY) $(ARCHIVES)
 	@echo "$(LIBNAME):$(SUBDIR): $(BUILD_TYPE) Linking Shared Library $(SHARED_SO)"
 	@echo "$(LIBNAME):$(SUBDIR):   flags: $(LDFLAGS)"
 	@for l in $(LIBRARY) $(ARCHIVES); do echo "$(LIBNAME):$(SUBDIR):   using: $$l"; done
-	@echo "$(LIBNAME):$(SUBDIR):   libs: $(LOADLIBES)"
-	@gcc -shared -o $(SHARED_SO) $(LDFLAGS) $(RC_OBJECTS) -Wl,--whole-archive $(LIBRARY) -Wl,--no-whole-archive $(ARCHIVES) $(LOADLIBES)
+	@echo "$(LIBNAME):$(SUBDIR):   libs: $(LDLIBS) $(LDLAST)"
+	@$(CC) -shared -o $(SHARED_SO) $(LDFLAGS) $(RC_OBJECTS) -Wl,--whole-archive $(LIBRARY) -Wl,--no-whole-archive $(ARCHIVES) $(LDLIBS) $(LDLAST)
 
 endif
 
@@ -267,13 +286,15 @@ $(ARCHIVE_LIBRARIES): FORCE
 	@$(MAKE) -C $@
 
 # the rule for linking an image
+# Note: I used to link with $(CXX) which maps onto g++ but there's a bug see: http://sourceforge.net/p/tdm-gcc/bugs/291/
+#       I now link with $(CC) which maps onto cc by default but should then map onto gcc
 $(IMAGE): $(LIBRARY) $(ARCHIVES)
 	@echo "$(LIBNAME):$(SUBDIR): $(BUILD_TYPE) Linking $(IMAGE)"
 	@echo "$(LIBNAME):$(SUBDIR):   flags: $(LDFLAGS)"
 	@for l in $(LIBRARY) $(ARCHIVES); do echo "$(LIBNAME):$(SUBDIR):   using: $$l"; done
-	@echo "$(LIBNAME):$(SUBDIR):   libs: $(LOADLIBES)"
+	@echo "$(LIBNAME):$(SUBDIR):   libs: $(LDLIBS) $(LDLAST)"
 	@mkdir -p $(dir $(IMAGE))
-	@gcc -o $(IMAGE) $(LDFLAGS) $(RC_OBJECTS) $^ $(LOADLIBES)
+	@$(CC) -o $(IMAGE) $(LDFLAGS) $(RC_OBJECTS) $^ $(LDLIBS) $(LDLAST)
 
 endif
 

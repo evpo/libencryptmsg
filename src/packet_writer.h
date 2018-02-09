@@ -1,3 +1,9 @@
+//**********************************************************************************
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
+//<http://www.evpo.net/encryptpad>
+//
+//libencryptmsg is released under the Simplified BSD License (see license.txt)
+//**********************************************************************************
 #pragma once
 #include <map>
 #include "message_config.h"
@@ -15,6 +21,11 @@ namespace LibEncryptMsg
             void Write(OutStream &out);
             void Finish(OutStream &out);
             InBufferStream &GetInStream();
+
+            virtual ~PacketWriter(){}
+            PacketWriter(const PacketWriter&) = delete;
+            PacketWriter &operator=(const PacketWriter&) = delete;
+
         protected:
             InBufferStream in_;
             InBufferStream out_;
