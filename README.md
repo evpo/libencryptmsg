@@ -2,8 +2,6 @@
 
 This is an OpenPGP implementation that works with symmetrically encrypted files following RFC4880 specification.
 
-**This library is currently in Alpha stage. It is not recommended for production**
-
 CLI:
 
     ./bin/debug/encryptmsg
@@ -48,9 +46,3 @@ Tests:
 4. [**zlib**](http://zlib.net/)
 5. [**gtest**](http://code.google.com/p/googletest/)
 6. [**plog**](https://github.com/SergiusTheBest/plog)
-
-## License
-
-libEncryptMsg is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version.
-
-libEncryptMsg is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
