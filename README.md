@@ -46,3 +46,11 @@ Tests:
 4. [**zlib**](http://zlib.net/)
 5. [**gtest**](http://code.google.com/p/googletest/)
 6. [**plog**](https://github.com/SergiusTheBest/plog)
+
+
+## License
+
+EncryptPad Copyright 2018 Evgeny Pokhilko 
+<https://www.evpo.net/encryptpad>
+
+libencryptmsg is released under the Simplified BSD License (see license.txt)
