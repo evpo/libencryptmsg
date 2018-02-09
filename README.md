@@ -50,7 +50,7 @@ Tests:
 
 ## License
 
-EncryptPad Copyright 2018 Evgeny Pokhilko 
+libEncryptMsg Copyright 2018 Evgeny Pokhilko 
 <https://www.evpo.net/encryptpad>
 
 libencryptmsg is released under the Simplified BSD License (see license.txt)
