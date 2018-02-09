@@ -1,6 +1,6 @@
 .PHONY: src tests cli gtest symlinks clean-symlinks
 
-include ../../deps/makefiles/platform.mak
+include deps/makefiles/platform.mak
 
 
 all: src cli
