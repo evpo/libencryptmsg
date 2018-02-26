@@ -61,12 +61,12 @@ Tests:
 Acknowledgments
 ---------------
 
-1. `**Botan** <http://botan.randombit.net/>`__
-2. `**stlplus** <http://stlplus.sourceforge.net/>`__
-3. `**Makefiles** <http://stlplus.sourceforge.net/makefiles/docs/>`__
-4. `**zlib** <http://zlib.net/>`__
-5. `**gtest** <http://code.google.com/p/googletest/>`__
-6. `**plog** <https://github.com/SergiusTheBest/plog>`__
+1. `Botan <http://botan.randombit.net/>`__
+2. `stlplus <http://stlplus.sourceforge.net/>`__
+3. `Makefiles <http://stlplus.sourceforge.net/makefiles/docs/>`__
+4. `zlib <http://zlib.net/>`__
+5. `gtest <http://code.google.com/p/googletest/>`__
+6. `plog <https://github.com/SergiusTheBest/plog>`__
 
 License
 -------
