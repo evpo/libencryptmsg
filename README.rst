@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/evpo/libencryptmsg.svg?branch=master)](https://travis-ci.org/evpo/libencryptmsg)
+.. image:: https://travis-ci.org/evpo/libencryptmsg.svg?branch=master
+    :target: https://travis-ci.org/evpo/libencryptmsg
 
 libEncryptMsg
 =============
