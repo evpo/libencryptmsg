@@ -26,5 +26,4 @@ clean:
 	$(MAKE) -C cli clean RELEASE=$(RELEASE)
 	$(MAKE) -C src clean RELEASE=$(RELEASE)
 	$(MAKE) -C deps/state_machine clean RELEASE=$(RELEASE)
-	$(MAKE) -C deps/botan_1_openpgp_codec clean RELEASE=$(RELEASE)
 	$(MAKE) -C test_assets clean RELEASE=$(RELEASE)
