@@ -3,5 +3,5 @@ set -exu
 
 git clone https://github.com/randombit/botan $HOME/botan
 pushd $HOME/botan
-./configure.py --enable-modules=aes,pbkdf2,zlib --link-method=symlink
+./configure.py --prefix=/usr --enable-modules=aes,pbkdf2,zlib --link-method=symlink
 popd
