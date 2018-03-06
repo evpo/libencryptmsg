@@ -3,20 +3,20 @@
 include deps/makefiles/platform.mak
 
 
-all: src cli
+all: cli
 gtest:
 	$(MAKE) -C tests -f Makefile.gtest RELEASE=$(RELEASE)
 
-tests: gtest cli src
+tests: gtest | cli
 	$(MAKE) -C tests RELEASE=$(RELEASE)
 	$(MAKE) -C test_assets RELEASE=$(RELEASE)
 
-cli: src
+cli : src
 	$(MAKE) -C cli RELEASE=$(RELEASE)
 
 lib: src
 
-src: symlinks
+src : symlinks
 	$(MAKE) -C src RELEASE=$(RELEASE) BOTAN_CXXFLAGS=$(BOTAN_CXXFLAGS) OVERRIDE_BOTAN_FLAGS=$(OVERRIDE_BOTAN_FLAGS)
 	$(MAKE) -C deps/state_machine RELEASE=$(RELEASE) TRACE_STATE_MACHINE=$(TRACE_STATE_MACHINE)
 
