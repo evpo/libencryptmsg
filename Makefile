@@ -24,6 +24,7 @@ cli : src
 lib: src
 
 shared: symlinks
+	mkdir -p bin/$(CONFIG_DIR)
 	$(MAKE) -C src BUILD_SHARED=on
 
 src : symlinks
