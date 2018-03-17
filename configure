@@ -1,0 +1,64 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+USAGE="USAGE:\n\
+configure [options]\n\n\
+
+build options:\n\
+--debug-mode         enable debug info and disable optimizations\n\
+
+installation options:\n\
+--prefix=DIR         set the install prefix\n\
+--libdir=DIR         set the library install dir\n
+--includedir=DIR     set the include file install dir\n"
+
+VERSION=0.0.1
+DEBUG_MODE=false
+PREFIX=/usr/local
+LIBDIR=lib
+INCLUDEDIR=include
+
+while [[ $# > 0 ]]
+do
+    case $1 in
+        --debug-mode)
+            DEBUG_MODE=true
+            ;;
+        --prefix=*)
+            PREFIX=${1#--prefix=}
+            ;;
+        --libdir=*)
+            LIBDIR=${1#--libdir=}
+            ;;
+        --includedir=*)
+            INCLUDEDIR=${1#--includedir=}
+            ;;
+        *)
+            ;;
+    esac
+    shift
+done
+
+mkdir -p build
+cat > build/config.mak << EOM
+PREFIX=$PREFIX
+LIBDIR=$LIBDIR
+INCLUDEDIR=$INCLUDEDIR
+DEBUG_MODE=$DEBUG_MODE
+VERSION=$VERSION
+EOM
+
+cat > build/libencryptmsg.pc << EOM
+prefix=$PREFIX
+libdir=$PREFIX/$LIBDIR
+includedir=$PREFIX/$INCLUDEDIR/libencryptmsg
+
+Name: libencryptmsg
+Description: Symmetric encryption OpenPGP library
+Version: $VERSION
+
+Libs: -L\${libdir} -lencryptmsg
+Cflags: -I\${includedir}
+EOM

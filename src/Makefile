@@ -9,4 +9,21 @@ CXXFLAGS += $(shell pkg-config --cflags botan-2)
 endif
 
 LDFLAGS += -Wall
+
+ifeq ($(BUILD_SHARED),on)
+LDLIBS += -lm -lbotan-2
+ifeq ($(RELEASE),on)
+TARGETDIR := ../bin/release
+else
+TARGETDIR := ../bin/debug
+endif
+
+ifeq ($(WINDOWS),on)
+SHARED_SO := $(TARGETDIR)/encryptmsg.dll
+else
+SHARED_SO := $(TARGETDIR)/libencryptmsg.so
+endif
+
+endif
+
 include ../deps/makefiles/gcc.mak
