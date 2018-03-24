@@ -3,8 +3,8 @@
 set -e
 set -o pipefail
 
-USAGE="USAGE:\n\
-configure [options]\n\n\
+USAGE="USAGE: configure [options]\n\
+--help               this help information
 
 build options:\n\
 --debug-mode         enable debug info and disable optimizations\n\
@@ -34,6 +34,10 @@ do
             ;;
         --includedir=*)
             INCLUDEDIR=${1#--includedir=}
+            ;;
+        --help)
+            echo -e "$USAGE"
+            exit 0
             ;;
         *)
             ;;
