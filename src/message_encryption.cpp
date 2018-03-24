@@ -19,9 +19,9 @@
 
 using namespace std;
 using namespace LightStateMachine;
-using namespace LibEncryptMsg;
+using namespace EncryptMsg;
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class MessageWriterImpl
     {

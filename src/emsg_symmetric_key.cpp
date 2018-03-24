@@ -10,7 +10,7 @@
 #include "emsg_constants.h"
 #include "openpgp_conversions.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     Salt GenerateRandomSalt()
     {

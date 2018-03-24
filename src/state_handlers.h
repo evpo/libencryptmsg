@@ -10,7 +10,7 @@
 #pragma once
 #include "context.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     bool InitCanEnter(LightStateMachine::StateMachineContext &context);
     void InitOnEnter(LightStateMachine::StateMachineContext &context);

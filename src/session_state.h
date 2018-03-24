@@ -15,7 +15,7 @@
 #include "message_config.h"
 #include "passphrase_provider.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     using PacketChain = std::vector<PacketType>;
 

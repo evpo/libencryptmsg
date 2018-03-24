@@ -8,7 +8,7 @@
 #include <vector>
 #include "botan/symkey.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     enum class EmsgResult
     {

@@ -6,7 +6,7 @@
 //**********************************************************************************
 #include "passphrase_provider.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     Passphrase::Passphrase(const SafeVector &data_p)
         :data(data_p)

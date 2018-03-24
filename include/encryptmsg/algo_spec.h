@@ -8,7 +8,7 @@
 #pragma once
 #include <string>
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     enum class Compression
     {

@@ -7,7 +7,7 @@
 #include "emsg_exception.h"
 #include "assert.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     std::string InterpretEmsgResult(EmsgResult result)
     {

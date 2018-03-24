@@ -9,7 +9,7 @@
 
 using namespace Botan;
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     size_t DecodeS2KIterations(uint8_t count)
     {

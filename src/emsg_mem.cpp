@@ -6,7 +6,7 @@
 //**********************************************************************************
 #include "emsg_mem.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
 
 }

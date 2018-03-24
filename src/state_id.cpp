@@ -8,7 +8,7 @@
 #include <map>
 
 using namespace std;
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     const std::string &PrintStateID(StateID state_id)
     {

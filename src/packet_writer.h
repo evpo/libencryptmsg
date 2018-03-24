@@ -10,7 +10,7 @@
 #include "memory_stream.h"
 #include "packet_parsers.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     void WriteSymmetricKeyESK(const MessageConfig &config, Salt salt, OutStream &out);
 

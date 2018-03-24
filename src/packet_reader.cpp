@@ -18,7 +18,7 @@
 #include "emsg_constants.h"
 
 using namespace std;
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     using SafeVector = Botan::secure_vector<uint8_t>;
 

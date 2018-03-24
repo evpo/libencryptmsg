@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class NonCopyableNonMovable
     {

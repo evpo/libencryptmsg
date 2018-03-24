@@ -8,7 +8,7 @@
 #include "state_machine_utility.h"
 #include "state_machine_interface.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     struct SessionState;
 
@@ -19,7 +19,7 @@ namespace LibEncryptMsg
             SessionState *session_state_;
         public:
             Context();
-            LibEncryptMsg::SessionState &State();
-            void SetState(LibEncryptMsg::SessionState &session_state);
+            EncryptMsg::SessionState &State();
+            void SetState(EncryptMsg::SessionState &session_state);
     };
 }

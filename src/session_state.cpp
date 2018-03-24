@@ -7,7 +7,7 @@
 #include "session_state.h"
 #include "emsg_constants.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     SessionState::SessionState()
         :packet_chain(kMaxPacketChainLength, PacketType::Unknown),

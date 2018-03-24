@@ -8,7 +8,7 @@
 #include "memory_stream.h"
 #include <string>
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     enum class PacketType
     {

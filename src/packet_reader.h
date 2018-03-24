@@ -12,7 +12,7 @@
 #include "packet_parsers.h"
 #include "emsg_types.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     struct SessionState;
 

@@ -8,7 +8,7 @@
 #include <string>
 #include "state_machine_interface.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     enum class StateID : int
     {

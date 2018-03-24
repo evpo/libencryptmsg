@@ -7,7 +7,7 @@
 #pragma once
 #include <string>
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     void InitLogger(const std::string &file_name);
 }

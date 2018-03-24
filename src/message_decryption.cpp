@@ -15,7 +15,7 @@
 
 using namespace std;
 using namespace LightStateMachine;
-using namespace LibEncryptMsg;
+using namespace EncryptMsg;
 
 namespace LightStateMachine
 {
@@ -92,7 +92,7 @@ namespace
     };
 }
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
 
     class MessageReaderImpl

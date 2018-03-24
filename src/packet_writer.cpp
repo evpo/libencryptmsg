@@ -16,7 +16,7 @@
 using namespace std;
 using SafeVector = Botan::secure_vector<uint8_t>;
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     void WriteLength(OutStream &stm, size_t len)
     {

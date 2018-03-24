@@ -7,7 +7,7 @@
 #pragma once
 #include "state_graph.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     struct StateGraphInfo
     {

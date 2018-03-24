@@ -5,7 +5,7 @@
 //LibEncryptMsg is released under the Simplified BSD License (see license.txt)
 //**********************************************************************************
 #pragma once
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class NonCopyable
     {

@@ -6,7 +6,7 @@
 //**********************************************************************************
 #include "packet_parsers.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     size_t ReadLength(InBufferStream &stm, bool &is_partial_length)
     {

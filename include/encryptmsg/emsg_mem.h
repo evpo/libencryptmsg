@@ -7,7 +7,7 @@
 #pragma once
 #include "botan/secmem.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     using SafeVector = Botan::secure_vector<uint8_t>;
 }

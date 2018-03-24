@@ -9,7 +9,7 @@
 #include "emsg_types.h"
 #include "passphrase_provider.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     Salt GenerateRandomSalt();
 

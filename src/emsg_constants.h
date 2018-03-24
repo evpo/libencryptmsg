@@ -9,7 +9,7 @@
 #include <limits>
 #include "algo_spec.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     const size_t kMaxPacketChainLength = 5;
     const size_t kSaltSize = 8;

@@ -11,7 +11,7 @@
 
 using namespace LightStateMachine;
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     int ToInt(StateID state_id)
     {

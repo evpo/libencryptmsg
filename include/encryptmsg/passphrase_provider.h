@@ -11,7 +11,7 @@
 #include "algo_spec.h"
 #include "emsg_mem.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class PassphraseProvider
     {

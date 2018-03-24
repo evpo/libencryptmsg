@@ -9,7 +9,7 @@
 #include "packet_parsers.h"
 #include "emsg_constants.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     std::unique_ptr<OutStream> MakeOutStream(Botan::secure_vector<uint8_t> &cnt)
     {
@@ -84,7 +84,7 @@ namespace LibEncryptMsg
         InBufferStream stm;
         stm.Push(buf);
         bool is_partial = false;
-        SetPartialCount(LibEncryptMsg::ReadLength(stm, is_partial));
+        SetPartialCount(EncryptMsg::ReadLength(stm, is_partial));
         if(!is_partial)
             SetPartialLength(false);
         return it + 5U - stm.GetCount();

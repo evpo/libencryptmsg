@@ -14,7 +14,7 @@ using namespace std;
 using namespace LightStateMachine;
 
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     Context &ToContext(StateMachineContext &ctx)
     {
@@ -150,7 +150,7 @@ namespace LibEncryptMsg
 
         auto &buffer_stack = state.buffer_stack;
         Botan::secure_vector<uint8_t> output;
-        auto out_stm = LibEncryptMsg::MakeOutStream(output);
+        auto out_stm = EncryptMsg::MakeOutStream(output);
 
         // it can be empty when finishing
         if(!buffer_stack.empty())

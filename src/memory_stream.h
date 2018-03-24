@@ -8,7 +8,7 @@
 #include "emsg_mem.h"
 #include "emsg_utility.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class InBufferStream;
 

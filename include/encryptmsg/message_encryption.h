@@ -13,7 +13,7 @@
 #include "emsg_mem.h"
 #include "message_config.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class MessageWriterImpl;
     class MessageWriter : public NonCopyableNonMovable

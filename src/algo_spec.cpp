@@ -6,7 +6,7 @@
 //**********************************************************************************
 #include "algo_spec.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     const AlgoSpec &GetAlgoSpec(CipherAlgo cipher_algo)
     {

@@ -9,7 +9,7 @@
 #include <exception>
 #include "emsg_types.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class EmsgException : public std::exception
     {

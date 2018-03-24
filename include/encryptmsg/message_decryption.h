@@ -15,7 +15,7 @@
 #include "message_config.h"
 #include "algo_spec.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class MessageReaderImpl;
 

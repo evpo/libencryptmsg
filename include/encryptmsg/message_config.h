@@ -9,7 +9,7 @@
 #include "algo_spec.h"
 #include "emsg_types.h"
 
-namespace LibEncryptMsg
+namespace EncryptMsg
 {
     class MessageConfig
     {
