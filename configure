@@ -45,6 +45,17 @@ do
     shift
 done
 
+echo -n "pkg-config version: "
+if ! pkg-config --version ; then
+    echo "pkg-config is not found"
+    exit -1
+fi
+
+if ! pkg-config --exists botan-2; then
+    echo "pkg-config: package botan-2 is not found"
+    exit -1
+fi
+
 mkdir -p build
 cat > build/config.mak << EOM
 PREFIX=$PREFIX
