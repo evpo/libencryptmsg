@@ -5,8 +5,8 @@
 //LibEncryptMsg is released under the Simplified BSD License (see license.txt)
 //**********************************************************************************
 #pragma once
-#define VER_FILEVERSION             0,1,0,0
-#define VER_FILEVERSION_STR         "0.1.0.0"
+#define VER_FILEVERSION             0,1,0,1
+#define VER_FILEVERSION_STR         "0.1.0.1"
 
 #define VER_PRODUCTVERSION          VER_FILEVERSION
 #define VER_PRODUCTVERSION_STR      VER_FILEVERSION_STR
