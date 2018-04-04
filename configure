@@ -8,6 +8,7 @@ USAGE="USAGE: configure [options]\n\
 
 build options:\n\
 --debug-mode         enable debug info and disable optimizations\n\
+--static             build the static library\n\
 
 installation options:\n\
 --prefix=DIR         set the install prefix\n\
@@ -19,12 +20,16 @@ DEBUG_MODE=false
 PREFIX=/usr/local
 LIBDIR=lib
 INCLUDEDIR=include
+STATIC=false
 
 while [[ $# > 0 ]]
 do
     case $1 in
         --debug-mode)
             DEBUG_MODE=true
+            ;;
+        --static)
+            STATIC=true
             ;;
         --prefix=*)
             PREFIX=${1#--prefix=}
