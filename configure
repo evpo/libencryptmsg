@@ -20,7 +20,7 @@ DEBUG_MODE=false
 PREFIX=/usr/local
 LIBDIR=lib
 INCLUDEDIR=include
-STATIC=false
+STATIC_MODE=false
 
 while [[ $# > 0 ]]
 do
@@ -29,7 +29,7 @@ do
             DEBUG_MODE=true
             ;;
         --static)
-            STATIC=true
+            STATIC_MODE=true
             ;;
         --prefix=*)
             PREFIX=${1#--prefix=}
@@ -67,6 +67,7 @@ PREFIX=$PREFIX
 LIBDIR=$LIBDIR
 INCLUDEDIR=$INCLUDEDIR
 DEBUG_MODE=$DEBUG_MODE
+STATIC_MODE=$STATIC_MODE
 VERSION=$VERSION
 EOM
 
@@ -82,3 +83,38 @@ Version: $VERSION
 Libs: -L\${libdir} -lencryptmsg
 Cflags: -I\${includedir}
 EOM
+
+if [[ $STATIC == true ]]; then
+    pushd build > /dev/null
+
+    SUBDIR=$(cat <<EOM | make -s -f -
+include ../deps/makefiles/platform.mak
+all::
+	@echo \$(SUBDIR)
+EOM
+)
+
+    LIBRARIES=$(cat <<EOM | make -s -C ../src -f -
+.DEFAULT_GOAL := default
+include ./Makefile
+default::
+	@echo \$(LIBRARIES)
+EOM
+)
+    LIBRARIES+=" ."
+
+    # echo "SUBDIR=$SUBDIR"
+    # echo "LIBRARIES=$LIBRARIES"
+
+    for L in $LIBRARIES
+    do
+        LIB=../src/$L
+        find $LIB -maxdepth 1 -name '*.cpp' -printf '%f\n' | while read line
+        do
+            echo "ALL_OBJ += $LIB/${SUBDIR}/${line/%.cpp/.o}"
+        done
+
+    done > all_obj.mak
+    popd > /dev/null
+fi
+

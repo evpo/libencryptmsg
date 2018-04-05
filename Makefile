@@ -1,4 +1,4 @@
-.PHONY: src tests cli gtest symlinks clean-symlinks
+.PHONY: all shared static src tests cli gtest
 
 include deps/makefiles/platform.mak
 include build/config.mak
@@ -10,7 +10,13 @@ else
 	CONFIG_DIR := debug
 endif
 
-all: shared
+ifeq ($(STATIC_MODE),true)
+	TGT := static
+else
+	TGT := shared
+endif
+
+all: $(TGT)
 gtest:
 	$(MAKE) -C tests -f Makefile.gtest RELEASE=$(RELEASE)
 
@@ -23,11 +29,14 @@ cli : src
 
 lib: src
 
-shared: symlinks
+static: src
+	$(MAKE) -C build -f ../scripts/static.mak RELEASE=$(RELEASE)
+
+shared:
 	mkdir -p bin/$(CONFIG_DIR)
 	$(MAKE) -C src BUILD_SHARED=on
 
-src : symlinks
+src :
 	$(MAKE) -C src RELEASE=$(RELEASE) BOTAN_CXXFLAGS=$(BOTAN_CXXFLAGS) OVERRIDE_BOTAN_FLAGS=$(OVERRIDE_BOTAN_FLAGS)
 	$(MAKE) -C deps/state_machine RELEASE=$(RELEASE) TRACE_STATE_MACHINE=$(TRACE_STATE_MACHINE)
 
@@ -46,3 +55,4 @@ clean:
 	$(MAKE) -C src clean RELEASE=$(RELEASE)
 	$(MAKE) -C deps/state_machine clean RELEASE=$(RELEASE)
 	$(MAKE) -C test_assets clean RELEASE=$(RELEASE)
+	$(MAKE) -C build -f ../scripts/static.mak clean RELEASE=$(RELEASE)
