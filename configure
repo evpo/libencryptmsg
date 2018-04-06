@@ -3,17 +3,23 @@
 set -e
 set -o pipefail
 
-USAGE="USAGE: configure [options]\n\
+function print-usage()
+{
+cat <<EOM
+USAGE: configure [options]
 --help               this help information
 
-build options:\n\
---debug-mode         enable debug info and disable optimizations\n\
---static             build the static library\n\
+build options:
+--debug-mode         enable debug info and disable optimizations
+--static             build the static library
+--depsdir=DIR        directory with build dependencies (default: deps)
 
-installation options:\n\
---prefix=DIR         set the install prefix\n\
---libdir=DIR         set the library install dir\n
---includedir=DIR     set the include file install dir\n"
+installation options:
+--prefix=DIR         set the install prefix
+--libdir=DIR         set the library install dir
+--includedir=DIR     set the include file install dir
+EOM
+}
 
 VERSION=0.0.1
 DEBUG_MODE=false
@@ -21,6 +27,7 @@ PREFIX=/usr/local
 LIBDIR=lib
 INCLUDEDIR=include
 STATIC_MODE=false
+DEPSDIR=deps
 
 while [[ $# > 0 ]]
 do
@@ -40,8 +47,11 @@ do
         --includedir=*)
             INCLUDEDIR=${1#--includedir=}
             ;;
+        --depsdir=*)
+            DEPSDIR=${1#--depsdir=}
+            ;;
         --help)
-            echo -e "$USAGE"
+            print-usage
             exit 0
             ;;
         *)
@@ -69,6 +79,7 @@ INCLUDEDIR=$INCLUDEDIR
 DEBUG_MODE=$DEBUG_MODE
 STATIC_MODE=$STATIC_MODE
 VERSION=$VERSION
+DEPSDIR=$DEPSDIR
 EOM
 
 cat > build/libencryptmsg.pc << EOM

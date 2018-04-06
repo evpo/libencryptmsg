@@ -1,4 +1,5 @@
-include ../deps/makefiles/platform.mak
+include ../build/config.mak
+include ../$(DEPSDIR)/makefiles/platform.mak
 # Uncomment to add libraries
 LIBRARIES += ../deps/state_machine ../deps/stlplus/containers
 # ../deps/botan_1_openpgp_codec

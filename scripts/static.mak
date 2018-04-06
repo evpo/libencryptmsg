@@ -1,5 +1,6 @@
 .PHONY: all clean
-include ../deps/makefiles/platform.mak
+include ../build/config.mak
+include ../$(DEPSDIR)/makefiles/platform.mak
 include all_obj.mak
 CPP_OBJECTS := $(ALL_OBJ)
 OBJECTS := $(CPP_OBJECTS)

@@ -1,7 +1,7 @@
 .PHONY: all shared static src tests cli gtest
 
-include deps/makefiles/platform.mak
 include build/config.mak
+include $(DEPSDIR)/makefiles/platform.mak
 
 ifneq ($(DEBUG_MODE),true)
 	RELEASE=on
@@ -42,7 +42,7 @@ shared:
 
 src :
 	$(MAKE) -C src RELEASE=$(RELEASE) BOTAN_CXXFLAGS=$(BOTAN_CXXFLAGS) OVERRIDE_BOTAN_FLAGS=$(OVERRIDE_BOTAN_FLAGS)
-	$(MAKE) -C deps/state_machine RELEASE=$(RELEASE) TRACE_STATE_MACHINE=$(TRACE_STATE_MACHINE)
+	$(MAKE) -C $(DEPSDIR)/state_machine RELEASE=$(RELEASE) TRACE_STATE_MACHINE=$(TRACE_STATE_MACHINE)
 
 install: shared
 	cp -f ./bin/$(CONFIG_DIR)/libencryptmsg.so $(PREFIX)/$(LIBDIR)/libencryptmsg.so.$(VERSION)
@@ -57,7 +57,7 @@ clean:
 	$(MAKE) -C tests clean RELEASE=$(RELEASE)
 	$(MAKE) -C cli clean RELEASE=$(RELEASE)
 	$(MAKE) -C src clean RELEASE=$(RELEASE)
-	$(MAKE) -C deps/state_machine clean RELEASE=$(RELEASE)
+	$(MAKE) -C $(DEPSDIR)/state_machine clean RELEASE=$(RELEASE)
 	$(MAKE) -C test_assets clean RELEASE=$(RELEASE)
 ifeq ($(STATIC_MODE),true)
 	$(MAKE) -C build -f ../scripts/static.mak clean RELEASE=$(RELEASE)
