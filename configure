@@ -109,8 +109,8 @@ EOM
 )
     LIBRARIES+=" ."
 
-    echo "SUBDIR=$SUBDIR"
-    echo "LIBRARIES=$LIBRARIES"
+    # echo "SUBDIR=$SUBDIR"
+    # echo "LIBRARIES=$LIBRARIES"
 
     for L in $LIBRARIES
     do

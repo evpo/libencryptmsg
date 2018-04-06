@@ -38,7 +38,7 @@ static: src
 
 shared:
 	mkdir -p bin/$(CONFIG_DIR)
-	$(MAKE) -C src BUILD_SHARED=on
+	$(MAKE) -C src BUILD_SHARED=on RELEASE=$(RELEASE)
 
 src :
 	$(MAKE) -C src RELEASE=$(RELEASE) BOTAN_CXXFLAGS=$(BOTAN_CXXFLAGS) OVERRIDE_BOTAN_FLAGS=$(OVERRIDE_BOTAN_FLAGS)
@@ -59,4 +59,6 @@ clean:
 	$(MAKE) -C src clean RELEASE=$(RELEASE)
 	$(MAKE) -C deps/state_machine clean RELEASE=$(RELEASE)
 	$(MAKE) -C test_assets clean RELEASE=$(RELEASE)
+ifeq ($(STATIC_MODE),true)
 	$(MAKE) -C build -f ../scripts/static.mak clean RELEASE=$(RELEASE)
+endif
