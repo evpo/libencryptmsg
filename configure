@@ -84,10 +84,15 @@ Libs: -L\${libdir} -lencryptmsg
 Cflags: -I\${includedir}
 EOM
 
-if [[ $STATIC == true ]]; then
+if [[ $DEBUG_MODE != true ]]; then
+    RELEASE=on
+fi
+
+if [[ $STATIC_MODE == true ]]; then
     pushd build > /dev/null
 
     SUBDIR=$(cat <<EOM | make -s -f -
+RELEASE=$RELEASE
 include ../deps/makefiles/platform.mak
 all::
 	@echo \$(SUBDIR)
@@ -96,6 +101,7 @@ EOM
 
     LIBRARIES=$(cat <<EOM | make -s -C ../src -f -
 .DEFAULT_GOAL := default
+RELEASE=$RELEASE
 include ./Makefile
 default::
 	@echo \$(LIBRARIES)
@@ -103,8 +109,8 @@ EOM
 )
     LIBRARIES+=" ."
 
-    # echo "SUBDIR=$SUBDIR"
-    # echo "LIBRARIES=$LIBRARIES"
+    echo "SUBDIR=$SUBDIR"
+    echo "LIBRARIES=$LIBRARIES"
 
     for L in $LIBRARIES
     do

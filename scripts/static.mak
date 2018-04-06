@@ -13,6 +13,7 @@ endif
 LIBRARY := ../bin/$(CONF)/libencryptmsg.a
 
 $(LIBRARY): $(OBJECTS)
+	@mkdir -p ../bin/$(CONF)
 	@echo "$(LIBNAME):$(SUBDIR): Updating library $@"
 	@$(AR) crs $(LIBRARY) $(OBJECTS)
 

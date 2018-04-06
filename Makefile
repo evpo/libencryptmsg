@@ -3,6 +3,10 @@
 include deps/makefiles/platform.mak
 include build/config.mak
 
+ifneq ($(DEBUG_MODE),true)
+	RELEASE=on
+endif
+
 CONFIG_DIR :=
 ifeq ($(RELEASE),on)
 	CONFIG_DIR := release
