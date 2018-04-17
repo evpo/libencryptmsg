@@ -62,7 +62,7 @@ do
             DEPSDIR=${1#--depsdir=}
             ;;
         --botandir=*)
-            BOTANDIR=${1#--depsdir=}
+            BOTANDIR=${1#--botandir=}
             ;;
         --help)
             print-usage

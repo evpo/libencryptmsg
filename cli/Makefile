@@ -7,8 +7,14 @@ ifeq ($(RELEASE),on)
 CXXFLAGS += -ggdb
 endif
 
-BOTANLIB := $(shell pkg-config --libs botan-2)
-BOTANCXX := $(shell pkg-config --cflags botan-2)
+ifeq ($(BOTANDIR),)
+	BOTANCXX := $(shell pkg-config --cflags botan-2)
+	BOTANLIB := $(shell pkg-config --libs botan-2)
+else
+	BOTANCXX := -I$(BOTANDIR)/build/include
+	BOTANLIB := -L$(BOTANDIR) -lbotan-2 -fstack-protector -pthread
+endif
+
 CXXFLAGS += -Wall -Wextra -std=c++11 $(BOTANCXX)
 CXXFLAGS += -I../include/encryptmsg -I$(DEPSDIR)/plog/include
 LDFLAGS += -Wall

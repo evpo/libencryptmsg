@@ -5,14 +5,23 @@ LIBRARIES += $(DEPSDIR)/state_machine $(DEPSDIR)/stlplus/containers
 CXXFLAGS += -ggdb -std=c++11 -Wall -Wextra
 
 CXXFLAGS += -I./ -I../include/encryptmsg -I$(DEPSDIR)/plog/include $(BOTAN_CXXFLAGS)
-ifneq ($(OVERRIDE_BOTAN_FLAGS),on)
+
+ifeq ($(BOTANDIR),)
 CXXFLAGS += $(shell pkg-config --cflags botan-2)
+else
+CXXFLAGS += -I$(BOTANDIR)/build/include
 endif
 
 LDFLAGS += -Wall
 
 ifeq ($(BUILD_SHARED),on)
-LDLIBS += -lm -lbotan-2
+
+ifeq ($(BOTANDIR),)
+	LDLIBS += $(shell pkg-config --cflags botan-2)
+else
+	LDLIBS += -L$(BOTANDIR) -lbotan-2 -lm
+endif
+
 ifeq ($(RELEASE),on)
 TARGETDIR := ../bin/release
 else
