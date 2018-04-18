@@ -19,7 +19,7 @@ ifeq ($(BUILD_SHARED),on)
 ifeq ($(BOTANDIR),)
 	LDLIBS += $(shell pkg-config --cflags botan-2)
 else
-	LDLIBS += -L$(BOTANDIR) -lbotan-2 -lm
+	LDLIBS += -L$(BOTANDIR) -lbotan-2 -fstack-protector -lm -lz
 endif
 
 ifeq ($(RELEASE),on)
