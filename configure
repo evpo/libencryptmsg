@@ -126,17 +126,17 @@ if [[ $DEBUG_MODE != true ]]; then
 fi
 
 if [[ $STATIC_MODE == true ]]; then
-    pushd build > /dev/null
+    pushd src >/dev/null
 
-    SUBDIR=$(cat <<EOM | make -s -f -
+SUBDIR=$(cat <<EOM | make -s -f -
 RELEASE=$RELEASE
-include ../deps/makefiles/platform.mak
-all::
+include ${DEPSDIR}/makefiles/platform.mak
+all:
 	@echo \$(SUBDIR)
 EOM
 )
 
-    LIBRARIES=$(cat <<EOM | make -s -C ../src -f -
+LIBRARIES=$(cat <<EOM | make -s -f -
 .DEFAULT_GOAL := default
 RELEASE=$RELEASE
 include ./Makefile
@@ -146,18 +146,15 @@ EOM
 )
     LIBRARIES+=" ."
 
-    # echo "SUBDIR=$SUBDIR"
-    # echo "LIBRARIES=$LIBRARIES"
-
     for L in $LIBRARIES
     do
-        LIB=../src/$L
+        LIB=$L
         find $LIB -maxdepth 1 -name '*.cpp' -printf '%f\n' | while read line
         do
-            echo "ALL_OBJ += $LIB/${SUBDIR}/${line/%.cpp/.o}"
+            echo "ALL_OBJ += $(abs $LIB)/${SUBDIR}/${line/%.cpp/.o}"
         done
 
-    done > all_obj.mak
+    done > ../build/all_obj.mak
     popd > /dev/null
 fi
 
