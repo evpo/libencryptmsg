@@ -149,8 +149,9 @@ EOM
     for L in $LIBRARIES
     do
         LIB=$L
-        find $LIB -maxdepth 1 -name '*.cpp' -printf '%f\n' | while read line
+        find $LIB -maxdepth 1 -name '*.cpp' | while read line
         do
+            line=${line##*/}
             echo "ALL_OBJ += $(abs $LIB)/${SUBDIR}/${line/%.cpp/.o}"
         done
 
