@@ -45,6 +45,7 @@ endif
 
 ifeq ($(PLATFORM),MACOS)
 CXX := clang -m64
+CXX += -stdlib=libc++
 endif
 
 # need to build PIC on some platforms in order to use code in shared libraries
@@ -68,8 +69,14 @@ ifeq ($(STATIC),on)
 # switch on static linking with C/C++ runtimes
 LDFLAGS += -static-libgcc -static-libstdc++
 else
+
 # dynamic linking options - create a linker dependency on C++ runtime
+ifeq ($(PLATFORM),MACOS)
+LDLAST += -lc++
+else
 LDLAST += -lstdc++
+endif
+
 endif
 
 ################################################################################
@@ -122,7 +129,7 @@ BUILD_TYPE=static
 endif
 
 # set up shared library name as the actual target
-#SHARED_SO :=
+SHARED_SO :=
 ifneq ($(SHARED),)
 ifeq ($(WINDOWS),on)
 SHARED_SO := $(SUBDIR)/$(SHARED).dll
@@ -217,7 +224,7 @@ build:: $(LIBRARY) $(ARCHIVE_LIBRARIES) $(IMAGE) $(SHARED_SO)
 $(SUBDIR)/%.o: %.cpp
 	@echo "$(LIBNAME):$(SUBDIR): C++ compiling $<"
 	@mkdir -p $(SUBDIR)
-	@$(CXX) -x c++ -c -MMD $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES) $< -o $@
+	$(CXX) -x c++ -c -MMD $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 # the rule for compiling a C source file
 $(SUBDIR)/%.o: %.c
@@ -270,7 +277,7 @@ $(SHARED_SO): $(LIBRARY) $(ARCHIVES)
 	@echo "$(LIBNAME):$(SUBDIR):   flags: $(LDFLAGS)"
 	@for l in $(LIBRARY) $(ARCHIVES); do echo "$(LIBNAME):$(SUBDIR):   using: $$l"; done
 	@echo "$(LIBNAME):$(SUBDIR):   libs: $(LDLIBS) $(LDLAST)"
-	$(CC) -shared -o $(SHARED_SO) $(LDFLAGS) $(RC_OBJECTS) -Wl,--whole-archive $(LIBRARY) -Wl,--no-whole-archive $(ARCHIVES) $(LDLIBS) $(LDLAST)
+	@$(CC) -shared -o $(SHARED_SO) $(LDFLAGS) $(RC_OBJECTS) -Wl,--whole-archive $(LIBRARY) -Wl,--no-whole-archive $(ARCHIVES) $(LDLIBS) $(LDLAST)
 
 endif
 

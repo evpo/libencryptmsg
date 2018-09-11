@@ -1,5 +1,5 @@
 //**********************************************************************************
-//EncryptPad Copyright 2018 Evgeny Pokhilko
+//EncryptPad Copyright 2018 Evgeny Pokhilko 
 //<http://www.evpo.net/encryptpad>
 //
 //LightStateMachine is released under the Simplified BSD License (see license.txt)
@@ -22,10 +22,6 @@ namespace
     void DebugPrintState(std::string state_machine_name, std::string str)
     {
         LOG_DEBUG << "SM:" << state_machine_name << ": " << str;
-    }
-#else
-    void DebugPrintState(std::string state_machine_name, std::string str)
-    {
     }
 #endif
 }
