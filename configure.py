@@ -793,7 +793,7 @@ class OsInfo(InfoObject): # pylint: disable=too-many-instance-attributes
                 'man_dir': 'share/man',
                 'use_stack_protector': 'true',
                 'so_post_link_command': '',
-                'cli_exe_name': 'encryptcli',
+                'cli_exe_name': 'encryptmsg',
                 'test_exe_name': 'encryptpad_test',
                 'lib_prefix': 'lib',
                 'library_name': 'botan{suffix}-{major}',
@@ -1394,7 +1394,7 @@ def create_template_vars(source_paths, build_paths, options, modules, cc, arch, 
         logging.info('Defaulting to assuming %s endian', arch_info.endian)
         return arch_info.endian
 
-    build_dir = options.with_build_dir or os.path.curdir
+    build_dir = options.with_build_dir or build_paths.build_dir
     program_suffix = options.program_suffix or osinfo.program_suffix
 
     def join_with_build_dir(path):
@@ -1501,15 +1501,15 @@ def create_template_vars(source_paths, build_paths, options, modules, cc, arch, 
 
     if options.build_shared_lib:
         if osinfo.soname_pattern_base != None:
-            variables['soname_base'] = 'encryptmsg'
+            variables['soname_base'] = 'libencryptmsg'
             variables['shared_lib_name'] = variables['soname_base']
 
         if osinfo.soname_pattern_abi != None:
-            variables['soname_abi'] = 'encryptmsg'
+            variables['soname_abi'] = 'libencryptmsg'
             variables['shared_lib_name'] = variables['soname_abi']
 
         if osinfo.soname_pattern_patch != None:
-            variables['soname_patch'] = 'encryptmsg'
+            variables['soname_patch'] = 'libencryptmsg.so'
 
         # variables['lib_link_cmd'] = variables['lib_link_cmd'].format(**variables)
         # variables['post_link_cmd'] = osinfo.so_post_link_command.format(**variables) if options.build_shared_lib else ''
@@ -1923,7 +1923,9 @@ def configure_encryptmsg(system_command, options):
     template_vars['library_target'] = os.path.join(get_project_dir(), build_paths.build_dir, 'libencryptmsg.a')
     template_vars['sharedso_target'] = os.path.join(get_project_dir(), build_paths.build_dir, 'libencryptmsg.so')
     template_vars['cli_exe'] = os.path.join(build_paths.target_dir, 'encryptmsg')
+    template_vars['cli_exe_name'] = 'encryptmsg'
     template_vars['test_exe'] = os.path.join(build_paths.target_dir, 'encryptmsg-test')
+    template_vars['with_documentation'] = False
 
     include_paths = template_vars['include_paths']
     include_paths += ' ' + cc.add_include_dir_option + build_paths.internal_include_dir
