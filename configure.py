@@ -1125,6 +1125,108 @@ class CompilerInfo(InfoObject): # pylint: disable=too-many-instance-attributes
 
         return '$(LINKER)'
 
+def parse_version_file(version_path):
+    version_file = open(version_path)
+    key_and_val = re.compile(r"([a-z_]+) = ([a-zA-Z0-9:\-\']+)")
+
+    results = {}
+    for line in version_file.readlines():
+        if not line or line[0] == '#':
+            continue
+        match = key_and_val.match(line)
+        if match:
+            key = match.group(1)
+            val = match.group(2)
+
+            if val == 'None':
+                val = None
+            elif val.startswith("'") and val.endswith("'"):
+                val = val[1:len(val)-1]
+            else:
+                val = int(val)
+
+            results[key] = val
+    return results
+
+class Version(object):
+    """
+    Version information are all static members
+    """
+    data = {}
+
+    @staticmethod
+    def get_data():
+        if not Version.data:
+            root_dir = os.path.dirname(os.path.realpath(__file__))
+            Version.data = parse_version_file(os.path.join(root_dir, 'src/build-data/version.txt'))
+        return Version.data
+
+    @staticmethod
+    def major():
+        return Version.get_data()["release_major"]
+
+    @staticmethod
+    def minor():
+        return Version.get_data()["release_minor"]
+
+    @staticmethod
+    def patch():
+        return Version.get_data()["release_patch"]
+
+    @staticmethod
+    def packed():
+         # Used on Darwin for dylib versioning
+        return Version.major() * 1000 + Version.minor()
+
+    @staticmethod
+    def so_rev():
+        return Version.get_data()["release_so_abi_rev"]
+
+    @staticmethod
+    def release_type():
+        return Version.get_data()["release_type"]
+
+    @staticmethod
+    def datestamp():
+        return Version.get_data()["release_datestamp"]
+
+    @staticmethod
+    def as_string():
+        return '%d.%d.%d' % (Version.major(), Version.minor(), Version.patch())
+
+    @staticmethod
+    def vc_rev():
+        # Lazy load to ensure _local_repo_vc_revision() does not run before logger is set up
+        if Version.get_data()["release_vc_rev"] is None:
+            Version.data["release_vc_rev"] = Version._local_repo_vc_revision()
+        return Version.get_data()["release_vc_rev"]
+
+    @staticmethod
+    def _local_repo_vc_revision():
+        vc_command = ['git', 'rev-parse', 'HEAD']
+        cmdname = vc_command[0]
+
+        try:
+            vc = subprocess.Popen(
+                vc_command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True)
+            (stdout, stderr) = vc.communicate()
+
+            if vc.returncode != 0:
+                logging.debug('Error getting rev from %s - %d (%s)'
+                              % (cmdname, vc.returncode, stderr))
+                return 'unknown'
+
+            rev = str(stdout).strip()
+            logging.debug('%s reported revision %s' % (cmdname, rev))
+
+            return '%s:%s' % (cmdname, rev)
+        except OSError as e:
+            logging.debug('Error getting rev from %s - %s' % (cmdname, e.strerror))
+            return 'unknown'
+
 class SourcePaths(object):
     """
     A collection of paths defined by the project structure and
@@ -1308,7 +1410,6 @@ def create_template_vars(source_paths, build_paths, options, modules, cc, arch, 
         'libname': 'encryptmsg',
         'command_line': configure_command_line(),
         'local_config': read_textfile(options.local_config),
-        'includedir': options.includedir or osinfo.header_dir,
 
         'out_dir': build_dir,
         'build_dir': build_paths.build_dir,
@@ -1374,8 +1475,44 @@ def create_template_vars(source_paths, build_paths, options, modules, cc, arch, 
 
         'with_debug_asserts': options.with_debug_asserts,
 
-        'mod_list': sorted([m.basename for m in modules])
+        'mod_list': sorted([m.basename for m in modules]),
+
+        'prefix': options.prefix or osinfo.install_root,
+        'bindir': options.bindir or osinfo.bin_dir,
+        'libdir': options.libdir or osinfo.lib_dir,
+        'includedir': options.includedir or osinfo.header_dir,
+
+        'version_major':  Version.major(),
+        'version_minor':  Version.minor(),
+        'version_patch':  Version.patch(),
+        'version_vc_rev': Version.vc_rev(),
+        'abi_rev':        Version.so_rev(),
+
+        'version':        Version.as_string(),
+        'release_type':   Version.release_type(),
+        'version_datestamp': Version.datestamp(),
+
+        'build_shared_lib': options.build_shared_lib,
+        'build_static_lib': options.static_linking,
         }
+
+    if options.os != 'windows':
+        variables['encryptmsg_pkgconfig'] = os.path.join(build_paths.build_dir, 'encryptmsg.pc')
+
+    if options.build_shared_lib:
+        if osinfo.soname_pattern_base != None:
+            variables['soname_base'] = 'encryptmsg'
+            variables['shared_lib_name'] = variables['soname_base']
+
+        if osinfo.soname_pattern_abi != None:
+            variables['soname_abi'] = 'encryptmsg'
+            variables['shared_lib_name'] = variables['soname_abi']
+
+        if osinfo.soname_pattern_patch != None:
+            variables['soname_patch'] = 'encryptmsg'
+
+        # variables['lib_link_cmd'] = variables['lib_link_cmd'].format(**variables)
+        # variables['post_link_cmd'] = osinfo.so_post_link_command.format(**variables) if options.build_shared_lib else ''
 
     # The name is always set because Windows build needs it
     variables['static_lib_name'] = 'ororo'
@@ -1406,6 +1543,9 @@ def do_io_for_build(cc, arch, osinfo, using_mods, build_paths, source_paths, tem
 
     def in_build_data(p):
         return os.path.join(source_paths.build_data_dir, p)
+
+    if 'encryptmsg_pkgconfig' in template_vars:
+        write_template(template_vars['encryptmsg_pkgconfig'], in_build_data('encryptmsg.pc.in'))
 
     link_method = choose_link_method(options)
 
@@ -1673,8 +1813,6 @@ def process_command_line(args):
     build_group.add_option('--with-local-config',
                            dest='local_config', metavar='FILE',
                            help='include the contents of FILE into build.h')
-    build_group.add_option('--includedir', metavar='DIR',
-                             help='set the include file install dir')
     build_group.add_option('--with-endian', metavar='ORDER', default=None,
                             help='override byte order guess')
     build_group.add_option('--with-python-versions', dest='python_version',
@@ -1720,6 +1858,16 @@ def process_command_line(args):
 
     build_group.add_option('--static-linking', action='store_true', dest='static_linking', default=False,
                            help='static linking')
+
+    # install section
+    build_group.add_option('--prefix', metavar='DIR',
+                             help='set the install prefix')
+    build_group.add_option('--bindir', metavar='DIR',
+                             help='set the binary install dir')
+    build_group.add_option('--libdir', metavar='DIR',
+                             help='set the library install dir')
+    build_group.add_option('--includedir', metavar='DIR',
+                             help='set the include file install dir')
 
     parser.add_option_group(build_group)
     (options, args) = parser.parse_args(args)
