@@ -8,6 +8,8 @@
 #include <cstdint>
 #include "algo_spec.h"
 #include "emsg_types.h"
+#include "emsg_utility.h"
+#include "utility.h"
 
 namespace EncryptMsg
 {
@@ -23,32 +25,32 @@ namespace EncryptMsg
             bool binary_;
             uint8_t partial_length_power_;
         public:
-            MessageConfig();
-            CipherAlgo GetCipherAlgo() const;
-            void SetCipherAlgo(CipherAlgo algo);
+            PUBIF MessageConfig();
+            PUBIF CipherAlgo GetCipherAlgo() const;
+            PUBIF void SetCipherAlgo(CipherAlgo algo);
 
-            HashAlgo GetHashAlgo() const;
-            void SetHashAlgo(HashAlgo hash_algo);
+            PUBIF HashAlgo GetHashAlgo() const;
+            PUBIF void SetHashAlgo(HashAlgo hash_algo);
 
-            uint8_t GetIterations() const;
-            void SetIterations(uint8_t iterations);
+            PUBIF uint8_t GetIterations() const;
+            PUBIF void SetIterations(uint8_t iterations);
 
-            Compression GetCompression() const;
-            void SetCompression(Compression compression);
+            PUBIF Compression GetCompression() const;
+            PUBIF void SetCompression(Compression compression);
 
-            const std::string &GetFileName() const;
-            void SetFileName(const std::string &file_name);
+            PUBIF const std::string &GetFileName() const;
+            PUBIF void SetFileName(const std::string &file_name);
 
-            FileDate GetFileDate() const;
-            void SetFileDate(FileDate file_date);
+            PUBIF FileDate GetFileDate() const;
+            PUBIF void SetFileDate(FileDate file_date);
 
             // Binary or text
-            bool GetBinary() const;
-            void SetBinary(bool binary);
+            PUBIF bool GetBinary() const;
+            PUBIF void SetBinary(bool binary);
 
             // Power of 2 to specify the length of segments
-            uint8_t GetPartialLengthPower() const;
-            void SetPartialLengthPower(uint8_t power);
+            PUBIF uint8_t GetPartialLengthPower() const;
+            PUBIF void SetPartialLengthPower(uint8_t power);
     };
 
 }

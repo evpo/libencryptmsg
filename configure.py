@@ -1926,6 +1926,7 @@ def configure_encryptmsg(system_command, options):
     template_vars['cli_exe_name'] = 'encryptmsg'
     template_vars['test_exe'] = os.path.join(build_paths.target_dir, 'encryptmsg-test')
     template_vars['with_documentation'] = False
+    # template_vars['shared_flags'] = '-fvisibility=default'
 
     include_paths = template_vars['include_paths']
     include_paths += ' ' + cc.add_include_dir_option + build_paths.internal_include_dir

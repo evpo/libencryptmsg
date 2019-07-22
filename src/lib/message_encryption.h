@@ -12,6 +12,7 @@
 #include "emsg_exception.h"
 #include "emsg_mem.h"
 #include "message_config.h"
+#include "utility.h"
 
 namespace EncryptMsg
 {
@@ -19,23 +20,23 @@ namespace EncryptMsg
     class MessageWriter : public NonCopyableNonMovable
     {
         public:
-            MessageWriter();
-            ~MessageWriter();
+            PUBIF MessageWriter();
+            PUBIF ~MessageWriter();
 
-            void Start(const SafeVector &passphrase, MessageConfig message_config = MessageConfig(),
+            PUBIF void Start(const SafeVector &passphrase, MessageConfig message_config = MessageConfig(),
                     Salt salt = Salt());
-            void Start(std::unique_ptr<SafeVector> passphrase, MessageConfig message_config = MessageConfig(),
+            PUBIF void Start(std::unique_ptr<SafeVector> passphrase, MessageConfig message_config = MessageConfig(),
                     Salt salt = Salt());
 
-            void Start(EncryptionKey encryption_key, MessageConfig message_config, Salt salt);
-            void Start(std::unique_ptr<EncryptionKey> encryption_key, MessageConfig message_config, Salt salt);
+            PUBIF void Start(EncryptionKey encryption_key, MessageConfig message_config, Salt salt);
+            PUBIF void Start(std::unique_ptr<EncryptionKey> encryption_key, MessageConfig message_config, Salt salt);
 
-            void Update(SafeVector& buf);
-            void Finish(SafeVector& buf);
+            PUBIF void Update(SafeVector& buf);
+            PUBIF void Finish(SafeVector& buf);
 
-            const EncryptionKey &GetEncryptionKey() const;
-            const Salt &GetSalt() const;
-            const MessageConfig &GetMessageConfig() const;
+            PUBIF const EncryptionKey &GetEncryptionKey() const;
+            PUBIF const Salt &GetSalt() const;
+            PUBIF const MessageConfig &GetMessageConfig() const;
         private:
             MessageWriterImpl *impl_;
     };

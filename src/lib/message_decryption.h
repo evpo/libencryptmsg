@@ -14,6 +14,7 @@
 #include "passphrase_provider.h"
 #include "message_config.h"
 #include "algo_spec.h"
+#include "utility.h"
 
 namespace EncryptMsg
 {
@@ -22,34 +23,34 @@ namespace EncryptMsg
     class PacketAnalyzer : public NonCopyableNonMovable
     {
         public:
-            PacketAnalyzer();
-            ~PacketAnalyzer();
+            PUBIF PacketAnalyzer();
+            PUBIF ~PacketAnalyzer();
 
             // Start without passphrase to read headers before the data gets decrypted
-            void Start();
+            PUBIF void Start();
 
-            void Start(SafeVector passphrase);
-            void Start(std::unique_ptr<SafeVector> passphrase);
-            void Start(PassphraseProvider &passphrase_provider);
+            PUBIF void Start(SafeVector passphrase);
+            PUBIF void Start(std::unique_ptr<SafeVector> passphrase);
+            PUBIF void Start(PassphraseProvider &passphrase_provider);
 
             // For known keys
-            void Start(SymmetricKeyProvider &key_provider);
-            void Start(EncryptionKey encryption_key);
-            void Start(std::unique_ptr<EncryptionKey> encryption_key);
+            PUBIF void Start(SymmetricKeyProvider &key_provider);
+            PUBIF void Start(EncryptionKey encryption_key);
+            PUBIF void Start(std::unique_ptr<EncryptionKey> encryption_key);
 
             // Push buffer to analyze message
             // Returns true when the parameters are received
             // Throws EmsgException
-            bool Update(const SafeVector &buf);
+            PUBIF bool Update(const SafeVector &buf);
 
             // Push buffer to analyze message and notify that the intput is complete
             // Returns true when the parameters are received
             // Throws EmsgException
-            bool Finish(const SafeVector &buf);
+            PUBIF bool Finish(const SafeVector &buf);
 
-            const EncryptionKey &GetEncryptionKey() const;
-            const MessageConfig &GetMessageConfig() const;
-            const Salt &GetSalt() const;
+            PUBIF const EncryptionKey &GetEncryptionKey() const;
+            PUBIF const MessageConfig &GetMessageConfig() const;
+            PUBIF const Salt &GetSalt() const;
 
         private:
             MessageReaderImpl *impl_;
@@ -58,24 +59,24 @@ namespace EncryptMsg
     class MessageReader : public NonCopyableNonMovable
     {
         public:
-            MessageReader();
-            ~MessageReader();
+            PUBIF MessageReader();
+            PUBIF ~MessageReader();
 
-            void Start(SafeVector passphrase);
-            void Start(std::unique_ptr<SafeVector> passphrase);
-            void Start(PassphraseProvider &passphrase_provider);
+            PUBIF void Start(SafeVector passphrase);
+            PUBIF void Start(std::unique_ptr<SafeVector> passphrase);
+            PUBIF void Start(PassphraseProvider &passphrase_provider);
 
             // For known keys
-            void Start(SymmetricKeyProvider &key_provider);
-            void Start(EncryptionKey encryption_key);
-            void Start(std::unique_ptr<EncryptionKey> encryption_key);
+            PUBIF void Start(SymmetricKeyProvider &key_provider);
+            PUBIF void Start(EncryptionKey encryption_key);
+            PUBIF void Start(std::unique_ptr<EncryptionKey> encryption_key);
 
-            void Update(SafeVector &buf);
-            void Finish(SafeVector &buf);
+            PUBIF void Update(SafeVector &buf);
+            PUBIF void Finish(SafeVector &buf);
 
-            const EncryptionKey &GetEncryptionKey() const;
-            const MessageConfig &GetMessageConfig() const;
-            const Salt &GetSalt() const;
+            PUBIF const EncryptionKey &GetEncryptionKey() const;
+            PUBIF const MessageConfig &GetMessageConfig() const;
+            PUBIF const Salt &GetSalt() const;
         private:
             MessageReaderImpl *impl_;
     };

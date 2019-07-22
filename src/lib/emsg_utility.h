@@ -10,6 +10,14 @@
 
 namespace EncryptMsg
 {
+    class NonCopyable
+    {
+        public:
+            NonCopyable(){}
+            NonCopyable(const NonCopyable &) = delete;
+            const NonCopyable &operator=(const NonCopyable&) = delete;
+    };
+
     class NonCopyableNonMovable
     {
         NonCopyableNonMovable(const NonCopyableNonMovable&) = delete;
