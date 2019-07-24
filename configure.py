@@ -815,7 +815,7 @@ class OsInfo(InfoObject): # pylint: disable=too-many-instance-attributes
                 raise InternalError("Invalid soname_patterns in %s" % (self.infofile))
         else:
             if lex.soname_suffix:
-                self.soname_pattern_base = "libbotan{lib_suffix}-{version_major}.%s" % (lex.soname_suffix)
+                self.soname_pattern_base = "libencryptmsg.%s" % (lex.soname_suffix)
                 self.soname_pattern_abi = self.soname_pattern_base + ".{abi_rev}"
                 self.soname_pattern_patch = self.soname_pattern_abi + ".{version_minor}.{version_patch}"
             else:
@@ -1403,6 +1403,11 @@ def create_template_vars(source_paths, build_paths, options, modules, cc, arch, 
             return path
         return os.path.join(build_dir, path)
 
+    def shared_lib_uses_symlinks():
+        if options.os in ['windows', 'openbsd']:
+            return False
+        return True
+
     variables = {
         'base_dir': source_paths.base_dir,
         'src_dir': source_paths.src_dir,
@@ -1493,6 +1498,7 @@ def create_template_vars(source_paths, build_paths, options, modules, cc, arch, 
         'version_datestamp': Version.datestamp(),
 
         'build_shared_lib': options.build_shared_lib,
+        'symlink_shared_lib': options.build_shared_lib and shared_lib_uses_symlinks(),
         'build_static_lib': options.static_linking,
         }
 
@@ -1501,15 +1507,15 @@ def create_template_vars(source_paths, build_paths, options, modules, cc, arch, 
 
     if options.build_shared_lib:
         if osinfo.soname_pattern_base != None:
-            variables['soname_base'] = 'libencryptmsg'
+            variables['soname_base'] = osinfo.soname_pattern_base.format(**variables)
             variables['shared_lib_name'] = variables['soname_base']
 
         if osinfo.soname_pattern_abi != None:
-            variables['soname_abi'] = 'libencryptmsg'
+            variables['soname_abi'] = osinfo.soname_pattern_abi.format(**variables)
             variables['shared_lib_name'] = variables['soname_abi']
 
         if osinfo.soname_pattern_patch != None:
-            variables['soname_patch'] = 'libencryptmsg.so'
+            variables['soname_patch'] = osinfo.soname_pattern_patch.format(**variables)
 
         # variables['lib_link_cmd'] = variables['lib_link_cmd'].format(**variables)
         # variables['post_link_cmd'] = osinfo.so_post_link_command.format(**variables) if options.build_shared_lib else ''
@@ -1921,7 +1927,7 @@ def configure_encryptmsg(system_command, options):
     template_vars = create_template_vars(source_paths, build_paths, options, info_modules.values(),
             cc, arch, osinfo)
     template_vars['library_target'] = os.path.join(get_project_dir(), build_paths.build_dir, 'libencryptmsg.a')
-    template_vars['sharedso_target'] = os.path.join(get_project_dir(), build_paths.build_dir, 'libencryptmsg.so')
+    template_vars['sharedso_target'] = os.path.join(get_project_dir(), build_paths.build_dir, template_vars['shared_lib_name'])
     template_vars['cli_exe'] = os.path.join(build_paths.target_dir, 'encryptmsg')
     template_vars['cli_exe_name'] = 'encryptmsg'
     template_vars['test_exe'] = os.path.join(build_paths.target_dir, 'encryptmsg-test')
