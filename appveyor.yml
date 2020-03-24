@@ -20,7 +20,7 @@ install:
   - set QTDIR=%qtdir%
   - set QTTOOLS=C:\Qt\Tools\mingw530_32
   - set PATH=%QTTOOLS%\bin;%QTDIR%\bin;%PATH%;C:\MinGW\bin
-  - set BOTAN=c:\Users\appveyor\botan\out
+  - set BOTAN=c:\Users\appveyor\botan
   - set ZLIB=c:\Users\appveyor\zlib-1.2.11
 
 build_script:
@@ -34,7 +34,7 @@ build_script:
   - which g++
   - g++ --version
   - uname
-  - mingw32-make -j2 -C c:\Users\appveyor\botan install
-  - python configure.py --debug-mode --test --build-cli --botan-include-dir %BOTAN%\include\botan-2 --botan-lib-dir %BOTAN%\lib --zlib-include-dir %ZLIB% --zlib-lib-dir %ZLIB%
+  - mingw32-make -j2 -C c:\Users\appveyor\botan libs
+  - python configure.py --debug-mode --test --build-cli --botan-include-dir %BOTAN%\build\include --botan-lib-dir %BOTAN% --zlib-include-dir %ZLIB% --zlib-lib-dir %ZLIB%
   - mingw32-make -j2
   - bash -c "cd bin/debug && ./encryptmsg-test"
