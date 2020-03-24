@@ -1929,6 +1929,9 @@ def configure_encryptmsg(system_command, options):
     template_vars['library_target'] = os.path.join(get_project_dir(), build_paths.build_dir, 'libencryptmsg.a')
     if options.build_shared_lib:
         template_vars['sharedso_target'] = os.path.join(get_project_dir(), build_paths.build_dir, template_vars['shared_lib_name'])
+    else:
+        template_vars['sharedso_target'] = ""
+
     template_vars['cli_exe'] = os.path.join(build_paths.target_dir, 'encryptmsg')
     template_vars['cli_exe_name'] = 'encryptmsg'
     template_vars['test_exe'] = os.path.join(build_paths.target_dir, 'encryptmsg-test')
