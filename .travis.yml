@@ -21,7 +21,7 @@ install:
         if [[ "$TRAVIS_OS_NAME" == "osx" ]]
         then
             ./ci/prepare.sh osx
-            sudo make -j2 -C $HOME/botan install
+            sudo make -j2 -C $HOME/botan libs
         fi
 script:
     - |
@@ -34,7 +34,7 @@ script:
     - |
         if [[ "$TRAVIS_OS_NAME" == "osx" ]]
         then
-            ./configure.py --debug-mode --test --build-cli --botan-include-dir $HOME/botan/out/include/botan-2 --botan-lib-dir $HOME/botan/out/lib
+            ./configure.py --debug-mode --test --build-cli --botan-include-dir $HOME/botan/build/include --botan-lib-dir $HOME/botan
             make
             pushd ./bin/debug/ && ./encryptmsg-test && popd
         fi
