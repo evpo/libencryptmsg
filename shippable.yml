@@ -1,4 +1,4 @@
-language: cpp
+language: c
 os:
    - linux
    - osx
@@ -6,14 +6,14 @@ os:
 compiler: gcc
 env: CONFIG=Debug
 group: stable
-dist: trusty
+# dist: trusty
 
 install:
     - |
         if [[ "$TRAVIS_OS_NAME" == "linux" ]]
         then
-            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
-            sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
+            # sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
+            # sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
             ./ci/prepare.sh linux
             sudo make -j2 -C $HOME/botan install
         fi
@@ -44,4 +44,4 @@ addons:
             - ubuntu-toolchain-r-test
         packages:
             - zlib1g-dev
-            - g++-5
+            - g++-8
