@@ -2,7 +2,7 @@
     :target: https://travis-ci.org/evpo/libencryptmsg
 
 .. image:: https://api.shippable.com/projects/5e7d3e77ed7c630006ceae51/badge?branch=master
-    :target: https://api.shippable.com/projects/5e7d3e77ed7c630006ceae51/badge?branch=master
+    :target: https://app.shippable.com/github/evpo/libencryptmsg
 
 libEncryptMsg
 =============
