@@ -6,7 +6,6 @@ os:
 compiler: gcc
 env: CONFIG=Debug
 group: stable
-# dist: trusty
 
 install:
     - |
@@ -44,4 +43,4 @@ addons:
             - ubuntu-toolchain-r-test
         packages:
             - zlib1g-dev
-            - g++-8
+            - g++-9
