@@ -111,7 +111,9 @@ namespace EncryptMsg
         Context &context = ToContext(ctx);
         auto &state = context.State();
         auto &reader = state.armor_header_reader;
-        EmsgResult result = reader.Read(state.finish_packets);
+        reader.GetInStream().Push(state.buffer_stack.top());
+        state.buffer_stack.pop();
+        state.emsg_result = reader.Read(state.finish_packets);
         switch(state.emsg_result)
         {
             case EmsgResult::Success:
@@ -135,9 +137,10 @@ namespace EncryptMsg
     {
         Context &context = ToContext(ctx);
         auto &state = context.State();
-        if(state.buffer_stack.empty() ||
-                state.buffer_stack.top().empty())
+
+        if(state.buffer_stack.empty() && !state.finish_packets)
             return false;
+
         // if Disabled, this state will pass through to ensure the sequence of states
         return state.armor_status == ArmorStatus::Payload ||
             state.armor_status == ArmorStatus::Disabled;
