@@ -70,9 +70,18 @@ namespace EncryptMsg
         // Header
         auto header_node = I(State(ToInt(StateID::Header), HeaderOnEnter, Stub, HeaderCanEnter, T));
 
+        // ArmorCheck
+        auto armor_header_node = I(State(ToInt(StateID::ArmorHeader), ArmorHeaderOnEnter, Stub, ArmorHeaderCanEnter, T));
+
+        // Armor
+        auto armor_node = I(State(ToInt(StateID::Armor), ArmorOnEnter, Stub, ArmorCanEnter, T));
+
         L(start_node, init_node);
-        L(init_node, packet_node);
-        L(init_node, header_node);
+        L(init_node, armor_header_node);
+        L(init_node, armor_node);
+        L(armor_header_node, armor_node);
+        L(armor_node, packet_node);
+        L(armor_node, header_node);
         L(header_node, packet_node);
         L(packet_node, header_node);
         L(packet_node, finish_node);
@@ -87,6 +96,8 @@ namespace EncryptMsg
         L(buffer_empty_node, end_node);
         L(header_node, buffer_empty_node);
         L(packet_node, buffer_empty_node);
+        L(armor_header_node, buffer_empty_node);
+        L(armor_node, buffer_empty_node);
 
         return {
             &state_graph,

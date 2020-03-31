@@ -14,10 +14,18 @@
 #include "emsg_utility.h"
 #include "message_config.h"
 #include "passphrase_provider.h"
+#include "armor_reader.h"
 
 namespace EncryptMsg
 {
     using PacketChain = std::vector<PacketType>;
+
+    enum class ArmorStatus {
+        Unknown,
+        Disabled,
+        Header,
+        Payload,
+    };
 
     // Session state will persist between calls to Update, Context will not
     struct SessionState : public NonCopyableNonMovable
@@ -28,6 +36,10 @@ namespace EncryptMsg
         PacketChain::iterator packet_chain_it;
         SymmetricKeyProvider *key_provider;
         std::unique_ptr<EncryptionKey> encryption_key;
+        ArmorHeaderReader armor_header_reader;
+        ArmorReader armor_reader;
+        ArmorStatus armor_status;
+
         // Stack of buffer that should be processed from top onwards
         // The invariant is that there are no empty buffers. If a buffer is empty, it should be popped.
         std::stack<SafeVector> buffer_stack;

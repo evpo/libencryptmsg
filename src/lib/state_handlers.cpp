@@ -95,6 +95,90 @@ namespace EncryptMsg
         }
     }
 
+    bool ArmorHeaderCanEnter(LightStateMachine::StateMachineContext &ctx)
+    {
+        Context &context = ToContext(ctx);
+        auto &state = context.State();
+        if(state.buffer_stack.empty() ||
+                state.buffer_stack.top().empty())
+            return false;
+        return state.armor_status == ArmorStatus::Unknown ||
+            state.armor_status == ArmorStatus::Header;
+    }
+
+    void ArmorHeaderOnEnter(LightStateMachine::StateMachineContext &ctx)
+    {
+        Context &context = ToContext(ctx);
+        auto &state = context.State();
+        auto &reader = state.armor_header_reader;
+        EmsgResult result = reader.Read(state.finish_packets);
+        switch(state.emsg_result)
+        {
+            case EmsgResult::Success:
+                {
+                    if(reader.GetInStream().GetCount() > 0)
+                    {
+                        state.buffer_stack.emplace();
+                        AppendToBuffer(reader.GetInStream(), state.buffer_stack.top());
+                    }
+                }
+                break;
+            case EmsgResult::Pending:
+                break;
+            default:
+                context.SetFailed(true);
+                break;
+        }
+    }
+
+    bool ArmorCanEnter(LightStateMachine::StateMachineContext &ctx)
+    {
+        Context &context = ToContext(ctx);
+        auto &state = context.State();
+        if(state.buffer_stack.empty() ||
+                state.buffer_stack.top().empty())
+            return false;
+        // if Disabled, this state will pass through to ensure the sequence of states
+        return state.armor_status == ArmorStatus::Payload ||
+            state.armor_status == ArmorStatus::Disabled;
+    }
+
+    void ArmorOnEnter(LightStateMachine::StateMachineContext &ctx)
+    {
+        Context &context = ToContext(ctx);
+        auto &state = context.State();
+
+        if(state.armor_status == ArmorStatus::Disabled)
+            return;
+
+        auto &reader = state.armor_reader;
+        auto &buffer_stack = state.buffer_stack;
+        Botan::secure_vector<uint8_t> output;
+        auto out_stm = EncryptMsg::MakeOutStream(output);
+
+        // it can be empty when finishing
+        if(!buffer_stack.empty())
+        {
+            reader.GetInStream().Push(buffer_stack.top());
+            buffer_stack.pop();
+        }
+
+        state.emsg_result = reader.Read(*out_stm);
+        switch(state.emsg_result)
+        {
+            case EmsgResult::Success:
+            case EmsgResult::Pending:
+                break;
+            default:
+                context.SetFailed(true);
+                return;
+        }
+
+        if(!output.empty())
+        {
+            buffer_stack.push(move(output));
+        }
+    }
 
     bool PacketCanExit(StateMachineContext &ctx)
     {
