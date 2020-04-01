@@ -1,9 +1,12 @@
 #include "armor_reader.h"
 #include <vector>
 #include <algorithm>
+#include "botan/hash.h"
+#include "botan/base64.h"
 #include "plog/Log.h"
 #include "session_state.h"
 #include "assert.h"
+
 
 namespace
 {
@@ -83,13 +86,51 @@ namespace EncryptMsg
         }
     }
 
-    EmsgResult ArmorReader::DoRead(OutStream &out)
+    EmsgResult ArmorReader::Read(OutStream &out)
+    {
+        using namespace Botan;
+        PushBackToBuffer(in_stm_, buffer_);
+        auto it = std::find(buffer_.begin(), buffer_.end(), '\n');
+        bool is_crc_found = false;
+        std::string line;
+        while(it != buffer_.end())
+        {
+            line.assign(buffer_.begin(), it);
+            LOG_INFO << "line= " << line;
+            it++;
+            buffer_.erase(buffer_.begin(), it);
+            if(line.size() > 1 && line[0] == '=' && line[1] != '=')
+            {
+                LOG_INFO << "CRC found";
+                is_crc_found = true;
+                break;
+            }
+            assert(line.size() % 4 == 0);
+            auto decoded_buf = base64_decode(line, false);
+            out.Write(decoded_buf.data(), decoded_buf.size());
+
+            it = std::find(buffer_.begin(), buffer_.end(), '\n');
+        }
+        if(is_crc_found)
+        {
+            LOG_INFO << "CRC: " << line;
+            return EmsgResult::UnexpectedError;
+        }
+        return EmsgResult::Success;
+    }
+
+    EmsgResult ArmorReader::Finish()
     {
         return EmsgResult::UnexpectedError;
     }
 
-    EmsgResult ArmorReader::DoFinish()
+    ArmorReader::ArmorReader(SessionState &state):
+        state_(state),
+        crc24_(Botan::HashFunction::create_or_throw("CRC24"))
     {
-        return EmsgResult::UnexpectedError;
+    }
+
+    ArmorReader::~ArmorReader()
+    {
     }
 }

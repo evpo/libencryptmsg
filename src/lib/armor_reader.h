@@ -4,6 +4,11 @@
 #include "packet_reader.h"
 #include <vector>
 
+namespace Botan
+{
+    class HashFunction;
+    class Pipe;
+}
 namespace EncryptMsg
 {
     class ArmorHeaderReader
@@ -26,15 +31,21 @@ namespace EncryptMsg
             EmsgResult Read(bool finish_packets);
     };
 
-    class ArmorReader : public PacketRWBase
+    class ArmorReader
     {
+        private:
+            InBufferStream in_stm_;
+            SessionState &state_;
+            SafeVector buffer_;
+            std::unique_ptr<Botan::HashFunction> crc24_;
         public:
-            ArmorReader(SessionState &state)
-                :PacketRWBase(state, false) // final_packet = false
+            ArmorReader(SessionState &state);
+            ~ArmorReader();
+            EmsgResult Read(OutStream &out);
+            EmsgResult Finish();
+            InBufferStream &GetInStream()
             {
+                return in_stm_;
             }
-        protected:
-            EmsgResult DoRead(OutStream &out) override;
-            EmsgResult DoFinish() override;
     };
 }
