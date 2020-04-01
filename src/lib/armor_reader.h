@@ -2,6 +2,7 @@
 #include "memory_stream.h"
 #include "emsg_types.h"
 #include "packet_reader.h"
+#include <vector>
 
 namespace EncryptMsg
 {
@@ -10,6 +11,7 @@ namespace EncryptMsg
         private:
             InBufferStream in_stm_;
             SessionState &state_;
+            SafeVector buffer_;
         public:
             ArmorHeaderReader(SessionState &state):
                 state_(state)
