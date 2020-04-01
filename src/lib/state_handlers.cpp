@@ -21,6 +21,22 @@ namespace
         StateMachineContext *p = &ctx;
         return *(static_cast<Context*>(p));
     }
+
+    bool EvaluateResult(Context &context)
+    {
+        auto &state = context.State();
+
+        switch(state.emsg_result)
+        {
+            case EmsgResult::Success:
+            case EmsgResult::Pending:
+                break;
+            default:
+                context.SetFailed(true);
+                return false;
+        }
+        return true;
+    }
 }
 
 namespace EncryptMsg
@@ -167,13 +183,13 @@ namespace EncryptMsg
         }
 
         state.emsg_result = reader.Read(*out_stm);
-        switch(state.emsg_result)
+        if(!EvaluateResult(context))
+            return;
+
+        if(state.finish_packets)
         {
-            case EmsgResult::Success:
-            case EmsgResult::Pending:
-                break;
-            default:
-                context.SetFailed(true);
+            state.emsg_result = reader.Finish();
+            if(!EvaluateResult(context))
                 return;
         }
 

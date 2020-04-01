@@ -3,6 +3,7 @@
 #include "emsg_types.h"
 #include "packet_reader.h"
 #include <vector>
+#include <string>
 
 namespace Botan
 {
@@ -38,6 +39,9 @@ namespace EncryptMsg
             SessionState &state_;
             SafeVector buffer_;
             std::unique_ptr<Botan::HashFunction> crc24_;
+            std::string received_crc_;
+            bool is_footer_found_;
+            bool ValidateCRC(const std::string &crc);
         public:
             ArmorReader(SessionState &state);
             ~ArmorReader();

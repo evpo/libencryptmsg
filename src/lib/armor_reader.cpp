@@ -89,44 +89,95 @@ namespace EncryptMsg
     EmsgResult ArmorReader::Read(OutStream &out)
     {
         using namespace Botan;
+        static const std::string kFooter = "-----END PGP MESSAGE-----";
+        static const unsigned int kMaxLineLength = 76;
+        if(is_footer_found_ && in_stm_.GetCount() > 0)
+            return EmsgResult::UnexpectedFormat;
+
         PushBackToBuffer(in_stm_, buffer_);
         auto it = std::find(buffer_.begin(), buffer_.end(), '\n');
         bool is_crc_found = false;
+        bool is_footer_found = false;
         std::string line;
         while(it != buffer_.end())
         {
             line.assign(buffer_.begin(), it);
-            LOG_INFO << "line= " << line;
             it++;
             buffer_.erase(buffer_.begin(), it);
-            if(line.size() > 1 && line[0] == '=' && line[1] != '=')
+            if(line.size() > 0 && line[0] == '=')
             {
-                LOG_INFO << "CRC found";
                 is_crc_found = true;
                 break;
             }
-            assert(line.size() % 4 == 0);
+
+            if(line == kFooter)
+            {
+                is_footer_found = true;
+                break;
+            }
+
+            if(received_crc_.size() > 0 || line.size() % 4 != 0)
+            {
+                return EmsgResult::UnexpectedFormat;
+            }
             auto decoded_buf = base64_decode(line, false);
+            crc24_->update(decoded_buf.data(), decoded_buf.size());
             out.Write(decoded_buf.data(), decoded_buf.size());
 
             it = std::find(buffer_.begin(), buffer_.end(), '\n');
         }
+
+        if(buffer_.size() > kMaxLineLength)
+            return EmsgResult::UnexpectedFormat;
+
         if(is_crc_found)
         {
-            LOG_INFO << "CRC: " << line;
-            return EmsgResult::UnexpectedError;
+            // Another CRC
+            if(received_crc_.size() > 0)
+                return EmsgResult::UnexpectedFormat;
+
+            line.erase(line.begin());
+            received_crc_ = line;
+            if(received_crc_.size() == 0 || !ValidateCRC(received_crc_))
+                return EmsgResult::UnexpectedFormat;
+        }
+
+        if(is_footer_found)
+        {
+            if(received_crc_.size() == 0)
+                return EmsgResult::UnexpectedFormat;
+
+            is_footer_found_ = true;
+            in_stm_.Push(buffer_);
+            buffer_.clear();
         }
         return EmsgResult::Success;
     }
 
+    bool ArmorReader::ValidateCRC(const std::string &crc)
+    {
+        using namespace Botan;
+        auto computed_crc = crc24_->final();
+        std::string computed_crc_str(base64_encode_max_output(computed_crc.size()), 0);
+        size_t consumed = 0;
+        size_t written = base64_encode(&computed_crc_str.front(), computed_crc.data(),
+                computed_crc.size(), consumed, true);
+        assert(written == computed_crc_str.size());
+        assert(crc.size() > 0);
+        return crc == computed_crc_str;
+    }
+
     EmsgResult ArmorReader::Finish()
     {
-        return EmsgResult::UnexpectedError;
+        if(!is_footer_found_)
+            return EmsgResult::UnexpectedFormat;
+        return EmsgResult::Success;
     }
 
     ArmorReader::ArmorReader(SessionState &state):
         state_(state),
-        crc24_(Botan::HashFunction::create_or_throw("CRC24"))
+        crc24_(Botan::HashFunction::create_or_throw("CRC24")),
+        is_footer_found_(false)
     {
     }
 
