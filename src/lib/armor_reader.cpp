@@ -28,6 +28,7 @@ namespace EncryptMsg
         if(finish_packets && in_stm_.GetCount() < kMinHeader.size())
         {
             state_.armor_status = ArmorStatus::Disabled;
+            state_.message_config.SetArmor(false);
             return EmsgResult::Success;
         }
 
@@ -42,9 +43,11 @@ namespace EncryptMsg
                 in_stm_.Push(received);
                 in_stm_.Push(remainder);
                 state_.armor_status = ArmorStatus::Disabled;
+                state_.message_config.SetArmor(false);
                 return EmsgResult::Success;
             }
             state_.armor_status = ArmorStatus::Header;
+            state_.message_config.SetArmor(true);
 
             assert(buffer_.size() == 0);
             AppendToBuffer(in_stm_, buffer_);
