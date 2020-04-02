@@ -31,6 +31,8 @@ namespace EncryptMsg
             InBufferStream in_stm_;
             ArmorContext &context_;
             SafeVector buffer_;
+
+            EmsgResult ReadUnknownFormat(bool finish_packets);
         public:
             ArmorHeaderReader(ArmorContext &context):
                 context_(context)

@@ -22,59 +22,77 @@ namespace
 
 namespace EncryptMsg
 {
-    EmsgResult ArmorHeaderReader::Read(bool finish_packets)
+    EmsgResult ArmorHeaderReader::ReadUnknownFormat(bool finish_packets)
     {
-        if(in_stm_.GetCount() < kMinHeader.size() && !finish_packets)
-            return EmsgResult::Pending;
+        assert(context_.status == ArmorStatus::Unknown);
 
-        if(finish_packets && in_stm_.GetCount() < kMinHeader.size())
+        if(in_stm_.GetCount() < kMinHeader.size())
         {
+            if(!finish_packets)
+                return EmsgResult::Pending;
+
             context_.status = ArmorStatus::Disabled;
             return EmsgResult::Success;
         }
 
+        SafeVector received(kMinHeader.size(), 0);
+        in_stm_.Read(received.data(), received.size());
+        if(!std::equal(kMinHeader.begin(), kMinHeader.end(), received.begin()))
+        {
+            SafeVector remainder;
+            AppendToBuffer(in_stm_, remainder);
+            in_stm_.Push(received);
+            in_stm_.Push(remainder);
+            context_.status = ArmorStatus::Disabled;
+            return EmsgResult::Success;
+        }
+        context_.status = ArmorStatus::Header;
+
+        assert(buffer_.size() == 0);
+        AppendToBuffer(in_stm_, buffer_);
+        buffer_.insert(buffer_.begin(), received.begin(), received.end());
+        return EmsgResult::Success;
+    }
+
+    EmsgResult ArmorHeaderReader::Read(bool finish_packets)
+    {
         if(context_.status == ArmorStatus::Unknown)
         {
-            SafeVector received(kMinHeader.size(), 0);
-            in_stm_.Read(received.data(), received.size());
-            if(!std::equal(kMinHeader.begin(), kMinHeader.end(), received.begin()))
+            auto result = ReadUnknownFormat(finish_packets);
+            switch(result)
             {
-                SafeVector remainder;
-                AppendToBuffer(in_stm_, remainder);
-                in_stm_.Push(received);
-                in_stm_.Push(remainder);
-                context_.status = ArmorStatus::Disabled;
-                return EmsgResult::Success;
-            }
-            context_.status = ArmorStatus::Header;
+                case EmsgResult::Pending:
+                    assert(context_.status == ArmorStatus::Unknown);
+                    return result;
+                case EmsgResult::Success:
+                    if(context_.status == ArmorStatus::Disabled)
+                        return result;
 
-            assert(buffer_.size() == 0);
-            AppendToBuffer(in_stm_, buffer_);
-            buffer_.insert(buffer_.begin(), received.begin(), received.end());
+                    break;
+                default:
+                    return result;
+            }
         }
 
-        AppendToBuffer(in_stm_, buffer_);
+        PushBackToBuffer(in_stm_, buffer_);
         bool empty_line_found = false;
         auto it = std::find(buffer_.begin(), buffer_.end(), '\n');
         while(it != buffer_.end())
         {
             std::vector<uint8_t> line(buffer_.begin(), it);
-            //for logging only
-            std::string line_str(line.begin(), line.end());
             if(context_.label.size() == 0)
             {
                 //this must be the first line
-                assert(line_str.size() >= kMinHeader.size());
-                int label_size = static_cast<int>(line_str.size()) - kMinHeader.size() - kSeparator.size();
+                assert(line.size() >= kMinHeader.size());
+                int label_size = static_cast<int>(line.size()) - kMinHeader.size() - kSeparator.size();
                 if(label_size < 0 || label_size > static_cast<int>(kMaxLineLength))
                     return EmsgResult::UnexpectedFormat;
 
-                auto label_it = line_str.begin() + kMinHeader.size();
+                auto label_it = line.begin() + kMinHeader.size();
                 context_.label.assign(label_it, label_it + label_size);
                 LOG_INFO << "label : " << context_.label;
             }
-
-            if(std::all_of(line.begin(), line.end(), is_space))
+            else if(std::all_of(line.begin(), line.end(), is_space))
             {
                 empty_line_found = true;
             }
