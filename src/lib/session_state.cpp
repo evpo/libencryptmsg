@@ -12,9 +12,8 @@ namespace EncryptMsg
     SessionState::SessionState() :
         packet_chain(kMaxPacketChainLength, PacketType::Unknown),
         packet_chain_it(packet_chain.end()), key_provider(nullptr),
-        armor_header_reader(*this),
-        armor_reader(*this),
-        armor_status(ArmorStatus::Unknown),
+        armor_header_reader(armor_context),
+        armor_reader(armor_context),
         packet_factory(*this),
         emsg_result(EmsgResult::None),
         is_message_analyzed(false),

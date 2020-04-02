@@ -12,15 +12,28 @@ namespace Botan
 }
 namespace EncryptMsg
 {
+    enum class ArmorStatus {
+        Unknown,
+        Disabled,
+        Header,
+        Payload,
+    };
+
+    struct ArmorContext
+    {
+        ArmorStatus status = ArmorStatus::Unknown;
+        std::string label;
+    };
+
     class ArmorHeaderReader
     {
         private:
             InBufferStream in_stm_;
-            SessionState &state_;
+            ArmorContext &context_;
             SafeVector buffer_;
         public:
-            ArmorHeaderReader(SessionState &state):
-                state_(state)
+            ArmorHeaderReader(ArmorContext &context):
+                context_(context)
             {
             }
 
@@ -36,14 +49,14 @@ namespace EncryptMsg
     {
         private:
             InBufferStream in_stm_;
-            SessionState &state_;
+            ArmorContext &context_;
             SafeVector buffer_;
             std::unique_ptr<Botan::HashFunction> crc24_;
             std::string received_crc_;
             bool is_footer_found_;
             bool ValidateCRC(const std::string &crc);
         public:
-            ArmorReader(SessionState &state);
+            ArmorReader(ArmorContext &context);
             ~ArmorReader();
             EmsgResult Read(OutStream &out);
             EmsgResult Finish();

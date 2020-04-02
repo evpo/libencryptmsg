@@ -7,32 +7,33 @@
 #include "session_state.h"
 #include "assert.h"
 
-
 namespace
 {
     bool is_space(char c)
     {
         return (c == ' ' || c == '\t' || c == '\n' || c == '\r');
     }
+    static const unsigned int kMaxLineLength = 76;
+    static const std::string kMinHeader = "-----BEGIN PGP ";
+    static const std::string kMinFooter = "-----END PGP ";
+    static const std::string kSeparator = "-----";
+
 }
 
 namespace EncryptMsg
 {
     EmsgResult ArmorHeaderReader::Read(bool finish_packets)
     {
-        static const std::string kMinHeader = "-----BEGIN PGP MESSAGE-----";
-
         if(in_stm_.GetCount() < kMinHeader.size() && !finish_packets)
             return EmsgResult::Pending;
 
         if(finish_packets && in_stm_.GetCount() < kMinHeader.size())
         {
-            state_.armor_status = ArmorStatus::Disabled;
-            state_.message_config.SetArmor(false);
+            context_.status = ArmorStatus::Disabled;
             return EmsgResult::Success;
         }
 
-        if(state_.armor_status == ArmorStatus::Unknown)
+        if(context_.status == ArmorStatus::Unknown)
         {
             SafeVector received(kMinHeader.size(), 0);
             in_stm_.Read(received.data(), received.size());
@@ -42,12 +43,10 @@ namespace EncryptMsg
                 AppendToBuffer(in_stm_, remainder);
                 in_stm_.Push(received);
                 in_stm_.Push(remainder);
-                state_.armor_status = ArmorStatus::Disabled;
-                state_.message_config.SetArmor(false);
+                context_.status = ArmorStatus::Disabled;
                 return EmsgResult::Success;
             }
-            state_.armor_status = ArmorStatus::Header;
-            state_.message_config.SetArmor(true);
+            context_.status = ArmorStatus::Header;
 
             assert(buffer_.size() == 0);
             AppendToBuffer(in_stm_, buffer_);
@@ -62,7 +61,19 @@ namespace EncryptMsg
             std::vector<uint8_t> line(buffer_.begin(), it);
             //for logging only
             std::string line_str(line.begin(), line.end());
-            LOG_INFO << "found line: " << line_str;
+            if(context_.label.size() == 0)
+            {
+                //this must be the first line
+                assert(line_str.size() >= kMinHeader.size());
+                int label_size = static_cast<int>(line_str.size()) - kMinHeader.size() - kSeparator.size();
+                if(label_size < 0 || label_size > static_cast<int>(kMaxLineLength))
+                    return EmsgResult::UnexpectedFormat;
+
+                auto label_it = line_str.begin() + kMinHeader.size();
+                context_.label.assign(label_it, label_it + label_size);
+                LOG_INFO << "label : " << context_.label;
+            }
+
             if(std::all_of(line.begin(), line.end(), is_space))
             {
                 empty_line_found = true;
@@ -80,7 +91,7 @@ namespace EncryptMsg
         {
             in_stm_.Push(buffer_);
             buffer_.clear();
-            state_.armor_status = ArmorStatus::Payload;
+            context_.status = ArmorStatus::Payload;
             return EmsgResult::Success;
         }
         else
@@ -92,14 +103,18 @@ namespace EncryptMsg
     EmsgResult ArmorReader::Read(OutStream &out)
     {
         using namespace Botan;
-        static const std::string kFooter = "-----END PGP MESSAGE-----";
-        static const unsigned int kMaxLineLength = 76;
+
+        // we should be in Payload status
+        if(context_.status != ArmorStatus::Payload)
+            return EmsgResult::UnexpectedError;
+
         if(is_footer_found_ && in_stm_.GetCount() > 0)
             return EmsgResult::UnexpectedFormat;
 
+        std::string footer = kMinFooter + context_.label + kSeparator;
+
         PushBackToBuffer(in_stm_, buffer_);
         auto it = std::find(buffer_.begin(), buffer_.end(), '\n');
-        bool is_crc_found = false;
         bool is_footer_found = false;
         std::string line;
         while(it != buffer_.end())
@@ -109,41 +124,39 @@ namespace EncryptMsg
             buffer_.erase(buffer_.begin(), it);
             if(line.size() > 0 && line[0] == '=')
             {
-                is_crc_found = true;
-                break;
-            }
+                // Another CRC
+                if(received_crc_.size() > 0)
+                    return EmsgResult::UnexpectedFormat;
 
-            if(line == kFooter)
+                line.erase(line.begin());
+                received_crc_ = line;
+                if(received_crc_.size() == 0 || !ValidateCRC(received_crc_))
+                    return EmsgResult::UnexpectedFormat;
+            }
+            else if(received_crc_.size() > 0 && line == footer)
             {
                 is_footer_found = true;
                 break;
             }
-
-            if(received_crc_.size() > 0 || line.size() % 4 != 0)
+            else
             {
-                return EmsgResult::UnexpectedFormat;
+                // Only footer should follow CRC
+                if(received_crc_.size() > 0)
+                    return EmsgResult::UnexpectedFormat;
+
+                if(line.size() % 4 != 0)
+                    return EmsgResult::UnexpectedFormat;
+
+                auto decoded_buf = base64_decode(line, false);
+                crc24_->update(decoded_buf.data(), decoded_buf.size());
+                out.Write(decoded_buf.data(), decoded_buf.size());
             }
-            auto decoded_buf = base64_decode(line, false);
-            crc24_->update(decoded_buf.data(), decoded_buf.size());
-            out.Write(decoded_buf.data(), decoded_buf.size());
 
             it = std::find(buffer_.begin(), buffer_.end(), '\n');
         }
 
         if(buffer_.size() > kMaxLineLength)
             return EmsgResult::UnexpectedFormat;
-
-        if(is_crc_found)
-        {
-            // Another CRC
-            if(received_crc_.size() > 0)
-                return EmsgResult::UnexpectedFormat;
-
-            line.erase(line.begin());
-            received_crc_ = line;
-            if(received_crc_.size() == 0 || !ValidateCRC(received_crc_))
-                return EmsgResult::UnexpectedFormat;
-        }
 
         if(is_footer_found)
         {
@@ -172,13 +185,16 @@ namespace EncryptMsg
 
     EmsgResult ArmorReader::Finish()
     {
+        // we should be in Payload status
+        if(context_.status != ArmorStatus::Payload)
+            return EmsgResult::UnexpectedError;
         if(!is_footer_found_)
             return EmsgResult::UnexpectedFormat;
         return EmsgResult::Success;
     }
 
-    ArmorReader::ArmorReader(SessionState &state):
-        state_(state),
+    ArmorReader::ArmorReader(ArmorContext &context):
+        context_(context),
         crc24_(Botan::HashFunction::create_or_throw("CRC24")),
         is_footer_found_(false)
     {

@@ -118,8 +118,8 @@ namespace EncryptMsg
         if(state.buffer_stack.empty() ||
                 state.buffer_stack.top().empty())
             return false;
-        return state.armor_status == ArmorStatus::Unknown ||
-            state.armor_status == ArmorStatus::Header;
+        return state.armor_context.status == ArmorStatus::Unknown ||
+            state.armor_context.status == ArmorStatus::Header;
     }
 
     void ArmorHeaderOnEnter(LightStateMachine::StateMachineContext &ctx)
@@ -134,6 +134,21 @@ namespace EncryptMsg
         {
             case EmsgResult::Success:
                 {
+                    switch(state.armor_context.status)
+                    {
+                        case ArmorStatus::Disabled:
+                            state.message_config.SetArmor(false);
+                            break;
+                        case ArmorStatus::Header:
+                        case ArmorStatus::Payload:
+                            state.message_config.SetArmor(true);
+                            break;
+                        default:
+                            // it should be known by now
+                            assert(false);
+                            break;
+                    }
+
                     if(reader.GetInStream().GetCount() > 0)
                     {
                         state.buffer_stack.emplace();
@@ -158,8 +173,8 @@ namespace EncryptMsg
             return false;
 
         // if Disabled, this state will pass through to ensure the sequence of states
-        return state.armor_status == ArmorStatus::Payload ||
-            state.armor_status == ArmorStatus::Disabled;
+        return state.armor_context.status == ArmorStatus::Payload ||
+            state.armor_context.status == ArmorStatus::Disabled;
     }
 
     void ArmorOnEnter(LightStateMachine::StateMachineContext &ctx)
@@ -167,7 +182,7 @@ namespace EncryptMsg
         Context &context = ToContext(ctx);
         auto &state = context.State();
 
-        if(state.armor_status == ArmorStatus::Disabled)
+        if(state.armor_context.status == ArmorStatus::Disabled)
             return;
 
         auto &reader = state.armor_reader;
