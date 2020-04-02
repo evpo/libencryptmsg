@@ -3,6 +3,7 @@
 #include "assert.h"
 #include "botan/hash.h"
 #include "botan/base64.h"
+#include "plog/Log.h"
 
 namespace
 {
@@ -45,7 +46,7 @@ namespace EncryptMsg
                     break;
                 case ArmorWriterStatus::Payload:
                     {
-                        if(finish && in_.GetCount() == 0)
+                        if(finish && in_.GetCount() == 0 && part_length_ == 0)
                         {
                             status_ = ArmorWriterStatus::Footer;
                             break;
@@ -69,6 +70,7 @@ namespace EncryptMsg
                                 finish);
                         crc24_->update(buffer_in_.data(), consumed);
                         buffer_out_.resize(result);
+                        LOG_INFO << "buffer_in_.size() : " << buffer_in_.size() << " consumed : " << consumed;
                         part_length_ = buffer_in_.size() - consumed;
                         assert(part_length_ == 0 || !finish);
                         std::copy(buffer_in_.begin() + consumed, buffer_in_.end(), part_.begin());
