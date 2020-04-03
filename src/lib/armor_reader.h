@@ -23,7 +23,7 @@ namespace EncryptMsg
         Disabled,
     };
 
-    class ArmorReader
+    class ArmorReader : public NonCopyableNonMovable
     {
         public:
             enum class ArmorReaderResult
