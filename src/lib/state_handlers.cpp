@@ -153,6 +153,8 @@ namespace EncryptMsg
         {
             case ArmorState::Disabled:
                 state.message_config.SetArmor(false);
+                buffer_stack.emplace();
+                AppendToBuffer(reader.GetInStream(), buffer_stack.top());
                 break;
             case ArmorState::Unknown:
                 break;
