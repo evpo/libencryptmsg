@@ -42,7 +42,15 @@ namespace EncryptMsg
                     out.Write(reinterpret_cast<const uint8_t*>(&kHeader.front()), kHeader.size());
                     out.Put('\n');
                     out.Put('\n');
+
                     status_ = ArmorWriterStatus::Payload;
+
+                    // special case: zero length input data
+                    // jump to footer
+                    if(finish && in_.GetCount() == 0)
+                    {
+                        status_ = ArmorWriterStatus::Footer;
+                    }
                     break;
                 case ArmorWriterStatus::Payload:
                     {

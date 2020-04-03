@@ -75,5 +75,25 @@ namespace EncryptMsg
             ASSERT_EQ(plain_file_.size(), decrypted_buf.size());
             ASSERT_TRUE(std::equal(plain_file_.begin(), plain_file_.end(), decrypted_buf.begin()));
         }
+
+        TEST_F(ArmorWriterFixture , When_writing_zero_message_Then_decrypted_output_empty)
+        {
+            // Arrange
+
+            SafeVector in;
+            SafeVector out;
+            auto out_stm = MakeOutStream(out);
+            ArmorWriter writer;
+            writer.Start();
+
+            // Act
+
+            writer.Write(*out_stm, true);
+
+            // Assert
+
+            SafeVector decrypted_buf = Decrypt(out);
+            ASSERT_EQ(0, decrypted_buf.size());
+        }
     }
 }

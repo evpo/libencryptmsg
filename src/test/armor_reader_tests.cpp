@@ -71,5 +71,29 @@ namespace EncryptMsg
             ASSERT_EQ(plain_file_.size(), out.size());
             ASSERT_TRUE(std::equal(out.begin(), out.end(), plain_file_.begin()));
         }
+
+        TEST_F(ArmorReaderFixture, When_reading_armored_zero_message_Then_output_is_empty)
+        {
+            // Arrange
+
+            std::vector<uint8_t> in_buf;
+            LoadFile("zero.txt.asc", in_buf);
+            SafeVector asc_of_zero(in_buf.begin(), in_buf.end());
+            ArmorReader reader;
+            SafeVector out;
+            auto out_stm = MakeOutStream(out);
+
+            // Act
+
+            reader.GetInStream().Push(asc_of_zero);
+            auto read_result = reader.Read(*out_stm);
+            auto finish_result = reader.Finish(*out_stm);
+
+            // Assert
+
+            ASSERT_EQ(EmsgResult::Success, read_result);
+            ASSERT_EQ(EmsgResult::Success, finish_result);
+            ASSERT_EQ(0, out.size());
+        }
     }
 }
