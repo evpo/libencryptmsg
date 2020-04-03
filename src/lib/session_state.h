@@ -29,8 +29,6 @@ namespace EncryptMsg
         PacketChain::iterator packet_chain_it;
         SymmetricKeyProvider *key_provider;
         std::unique_ptr<EncryptionKey> encryption_key;
-        ArmorContext armor_context;
-        ArmorHeaderReader armor_header_reader;
         ArmorReader armor_reader;
 
         // Stack of buffer that should be processed from top onwards

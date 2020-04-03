@@ -16,7 +16,6 @@ namespace EncryptMsg
         {
             {StateID::Start, "Start"},
             {StateID::Init, "Init"},
-            {StateID::ArmorHeader, "ArmorHeader"},
             {StateID::Armor, "Armor"},
             {StateID::Header,"Header"},
             {StateID::Packet,"Packet"},

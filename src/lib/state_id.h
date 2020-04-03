@@ -14,7 +14,6 @@ namespace EncryptMsg
     {
         Start,
         Init,
-        ArmorHeader,
         Armor,
         Header,
         Packet,

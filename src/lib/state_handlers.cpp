@@ -111,70 +111,10 @@ namespace EncryptMsg
         }
     }
 
-    bool ArmorHeaderCanEnter(LightStateMachine::StateMachineContext &ctx)
-    {
-        Context &context = ToContext(ctx);
-        auto &state = context.State();
-        if(state.buffer_stack.empty() ||
-                state.buffer_stack.top().empty())
-            return false;
-        return state.armor_context.status == ArmorStatus::Unknown ||
-            state.armor_context.status == ArmorStatus::Header;
-    }
-
-    void ArmorHeaderOnEnter(LightStateMachine::StateMachineContext &ctx)
-    {
-        Context &context = ToContext(ctx);
-        auto &state = context.State();
-        auto &reader = state.armor_header_reader;
-        reader.GetInStream().Push(state.buffer_stack.top());
-        state.buffer_stack.pop();
-        state.emsg_result = reader.Read(state.finish_packets);
-        switch(state.emsg_result)
-        {
-            case EmsgResult::Success:
-                {
-                    switch(state.armor_context.status)
-                    {
-                        case ArmorStatus::Disabled:
-                            state.message_config.SetArmor(false);
-                            break;
-                        case ArmorStatus::Header:
-                        case ArmorStatus::Payload:
-                            state.message_config.SetArmor(true);
-                            break;
-                        default:
-                            // it should be known by now
-                            assert(false);
-                            break;
-                    }
-
-                    if(reader.GetInStream().GetCount() > 0)
-                    {
-                        state.buffer_stack.emplace();
-                        AppendToBuffer(reader.GetInStream(), state.buffer_stack.top());
-                    }
-                }
-                break;
-            case EmsgResult::Pending:
-                break;
-            default:
-                context.SetFailed(true);
-                break;
-        }
-    }
-
     bool ArmorCanEnter(LightStateMachine::StateMachineContext &ctx)
     {
-        Context &context = ToContext(ctx);
-        auto &state = context.State();
-
-        if(state.buffer_stack.empty() && !state.finish_packets)
-            return false;
-
-        // if Disabled, this state will pass through to ensure the sequence of states
-        return state.armor_context.status == ArmorStatus::Payload ||
-            state.armor_context.status == ArmorStatus::Disabled;
+        auto &state = ToContext(ctx).State();
+        return (!state.buffer_stack.empty() || state.finish_packets);
     }
 
     void ArmorOnEnter(LightStateMachine::StateMachineContext &ctx)
@@ -182,12 +122,12 @@ namespace EncryptMsg
         Context &context = ToContext(ctx);
         auto &state = context.State();
 
-        if(state.armor_context.status == ArmorStatus::Disabled)
+        if(state.armor_reader.GetState() == ArmorState::Disabled)
             return;
 
         auto &reader = state.armor_reader;
         auto &buffer_stack = state.buffer_stack;
-        Botan::secure_vector<uint8_t> output;
+        SafeVector output;
         auto out_stm = EncryptMsg::MakeOutStream(output);
 
         // it can be empty when finishing
@@ -197,15 +137,28 @@ namespace EncryptMsg
             buffer_stack.pop();
         }
 
-        state.emsg_result = reader.Read(*out_stm);
+        if(state.finish_packets)
+        {
+            state.emsg_result = reader.Finish(*out_stm);
+        }
+        else
+        {
+            state.emsg_result = reader.Read(*out_stm);
+        }
+
         if(!EvaluateResult(context))
             return;
 
-        if(state.finish_packets)
+        switch(reader.GetState())
         {
-            state.emsg_result = reader.Finish();
-            if(!EvaluateResult(context))
-                return;
+            case ArmorState::Disabled:
+                state.message_config.SetArmor(false);
+                break;
+            case ArmorState::Unknown:
+                break;
+            default:
+                state.message_config.SetArmor(true);
+                break;
         }
 
         if(!output.empty())

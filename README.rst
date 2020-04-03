@@ -4,6 +4,9 @@
 .. image:: https://api.shippable.com/projects/5e7d3e77ed7c630006ceae51/badge?branch=master
     :target: https://app.shippable.com/github/evpo/libencryptmsg
 
+.. image:: https://ci.appveyor.com/api/projects/status/dn4ylkwk5mx4o3n4?svg=true
+    :target: https://ci.appveyor.com/project/evpo/libencryptmsg
+
 libEncryptMsg
 =============
 
