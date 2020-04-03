@@ -7,14 +7,23 @@ namespace EncryptMsg
 {
     namespace UnitTests
     {
-
-        class ArmorWriterFixture : public ::testing::Test
+        class ArmorWriterFixture : public ::testing::TestWithParam<unsigned int>
         {
             protected:
                 std::vector<uint8_t> plain_file_;
                 virtual void SetUp() override;
         };
 
+        static unsigned int buffer_sizes[] = 
+        {
+            1,
+            7,
+            15,
+            2048,
+        };
+
+        INSTANTIATE_TEST_CASE_P(Common, ArmorWriterFixture,
+                ::testing::ValuesIn(buffer_sizes));
         void ArmorWriterFixture::SetUp()
         {
             LoadFile("simple_text.txt", plain_file_);
@@ -31,13 +40,13 @@ namespace EncryptMsg
             return out;
         }
 
-        TEST_F(ArmorWriterFixture , When_writing_message_Then_decrypted_output_matches)
+        TEST_P(ArmorWriterFixture , When_writing_message_Then_decrypted_output_matches)
         {
             // Arrange
 
+            auto buf_size = GetParam();
             ArmorWriter writer;
-            SafeVector buf(plain_file_.begin(), plain_file_.end());
-            writer.GetInStream().Push(buf);
+            SafeVector buf;
             writer.Start();
 
             SafeVector out;
@@ -45,13 +54,26 @@ namespace EncryptMsg
 
             // Act
 
-            writer.Write(*out_stm, true);
+            auto it = plain_file_.begin();
+            while(it != plain_file_.end())
+            {
+                size_t range = std::min(
+                        static_cast<unsigned int>(std::distance(it, plain_file_.end())),
+                        buf_size);
+                auto range_end = it;
+                std::advance(range_end, range);
+                buf.assign(it, range_end);
+                it = range_end;
+                writer.GetInStream().Push(buf);
+                bool finish = (it == plain_file_.end());
+                writer.Write(*out_stm, finish);
+            }
 
             // Assert
 
             SafeVector decrypted_buf = Decrypt(out);
-            ASSERT_EQ(buf.size(), decrypted_buf.size());
-            ASSERT_TRUE(std::equal(buf.begin(), buf.end(), decrypted_buf.begin()));
+            ASSERT_EQ(plain_file_.size(), decrypted_buf.size());
+            ASSERT_TRUE(std::equal(plain_file_.begin(), plain_file_.end(), decrypted_buf.begin()));
         }
     }
 }
