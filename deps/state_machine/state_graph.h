@@ -10,5 +10,5 @@
 
 namespace LightStateMachine
 {
-    typedef stlplus::digraph<State,bool> StateGraph;
+    using StateGraph = stlplus::digraph<State,bool>;
 }
