@@ -122,7 +122,7 @@ namespace EncryptMsg
         Context &context = ToContext(ctx);
         auto &state = context.State();
 
-        if(state.armor_reader.GetState() == ArmorState::Disabled)
+        if(state.armor_reader.GetStatus() == ArmorStatus::Disabled)
             return;
 
         auto &reader = state.armor_reader;
@@ -149,17 +149,17 @@ namespace EncryptMsg
         if(!EvaluateResult(context))
             return;
 
-        switch(reader.GetState())
+        switch(reader.GetStatus())
         {
-            case ArmorState::Disabled:
+            case ArmorStatus::Disabled:
                 state.message_config.SetArmor(false);
                 buffer_stack.emplace();
                 AppendToBuffer(reader.GetInStream(), buffer_stack.top());
                 break;
-            case ArmorState::Unknown:
+            case ArmorStatus::Enabled:
+                state.message_config.SetArmor(true);
                 break;
             default:
-                state.message_config.SetArmor(true);
                 break;
         }
 

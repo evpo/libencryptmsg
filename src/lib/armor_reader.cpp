@@ -1,11 +1,15 @@
 #include "armor_reader.h"
 #include <vector>
+#include <map>
 #include <algorithm>
 #include "botan/hash.h"
 #include "botan/base64.h"
 #include "plog/Log.h"
 #include "session_state.h"
 #include "assert.h"
+#include "state_machine.h"
+
+using namespace LightStateMachine;
 
 namespace
 {
@@ -18,218 +22,184 @@ namespace
     static const std::string kMinHeader = "-----BEGIN PGP ";
     static const std::string kMinTail = "-----END PGP ";
     static const std::string kSeparator = "-----";
-
 }
 
 namespace EncryptMsg
 {
-    using Result = ArmorReader::ArmorReaderResult;
+    enum class ArmorState : StateMachineStateID
+    {
+        Start,
+        Unknown,
+        BeginHeader,
+        Header,
+        Payload,
+        CRC,
+        Tail,
+        TailFound,
+        Disabled,
+        Fail,
+    };
+
+    std::string GetStateName(StateMachineStateID state_id);
+    std::string GetStateName(StateMachineStateID state_id)
+    {
+        static const std::vector<std::string> names = 
+        {
+            "Start",
+            "Unknown",
+            "BeginHeader",
+            "Header",
+            "Payload",
+            "CRC",
+            "Tail",
+            "TailFound",
+            "Disabled",
+            "Fail",
+        };
+        const std::string &name = names[static_cast<size_t>(state_id)];
+        return std::string("armor : ") + name;
+    }
+
+    enum class Result
+    {
+        None,
+        Pending,
+        Disabled,
+        UnexpectedFormat,
+        Success,
+    };
+
+    struct LineResult
+    {
+        bool success = false;
+        bool max_length_reached = false;
+        std::vector<uint8_t> line;
+    };
+
+    struct ArmorReaderImpl
+    {
+        std::string label_;
+        InBufferStream in_stm_;
+        SafeVector buffer_;
+        std::unique_ptr<Botan::HashFunction> crc24_;
+        bool finish_;
+        Result result_;
+        ArmorStatus status_;
+        std::unique_ptr<StateMachine> state_machine_;
+        OutStream *out_;
+
+        bool ValidateCRC(const std::string &crc);
+        LineResult NextLine();
+        Result ReadUnknown();
+        Result ReadBeginHeader();
+        Result ReadHeader();
+        Result ReadPayload(OutStream &out);
+        Result ReadCRC();
+        Result ReadTail();
+
+        ArmorReaderImpl();
+
+        EmsgResult Read(StateMachine &state_machine, StateMachineContext &context, OutStream &out);
+        EmsgResult Finish(StateMachine &state_machine, StateMachineContext &context, OutStream &out);
+    };
+
+    struct ArmorGraph
+    {
+        StateGraph graph;
+        std::map<ArmorState, StateGraph::iterator> states;
+        ArmorGraph();
+    };
+
+    ArmorGraph &GetArmorGraph();
+    bool Shared_CanEnter(StateMachineContext& context);
+    bool IsNotPendingOrBuffer(StateMachineContext& context);
+    bool Unknown_CanEnter(StateMachineContext& context);
+    void Unknown_OnEnter(StateMachineContext& context);
+    bool Disabled_CanEnter(StateMachineContext& context);
+    void Disabled_OnEnter(StateMachineContext& context);
+    void BeginHeader_OnEnter(StateMachineContext& context);
+    void Header_OnEnter(StateMachineContext& context);
+    void Payload_OnEnter(StateMachineContext& context);
+    void CRC_OnEnter(StateMachineContext& context);
+    void Tail_OnEnter(StateMachineContext& context);
+    void TailFound_OnEnter(StateMachineContext& context);
+    void Fail_OnEnter(StateMachineContext& context);
+
+    ArmorGraph &GetArmorGraph()
+    {
+        static ArmorGraph graph;
+        return graph;
+    }
+
+    InBufferStream &ArmorReader::GetInStream()
+    {
+        return pimpl_->in_stm_;
+    }
+
+    ArmorStatus ArmorReader::GetStatus() const
+    {
+        return pimpl_->status_;
+    }
+
+    EmsgResult ArmorReader::Read(OutStream &out)
+    {
+        return pimpl_->Read(*state_machine_, *context_, out);
+    }
+    EmsgResult ArmorReader::Finish(OutStream &out)
+    {
+        return pimpl_->Finish(*state_machine_, *context_, out);
+    }
 
     ArmorReader::ArmorReader():
-        state_(ArmorState::Unknown),
-        crc24_(Botan::HashFunction::create_or_throw("CRC24")),
-        emsg_result_(EmsgResult::None),
-        finish_(false)
+        pimpl_(new ArmorReaderImpl()),
+        context_(new StateMachineContext(pimpl_)),
+        state_machine_(new StateMachine(GetArmorGraph().graph,
+                    GetArmorGraph().states[ArmorState::Start],
+                    GetArmorGraph().states[ArmorState::Fail],
+                    *context_))
     {
+        state_machine_->SetStateIDToStringConverter(GetStateName);
     }
 
     ArmorReader::~ArmorReader()
     {
     }
 
-    void ArmorReader::SetState(ArmorState state)
+    ArmorReaderImpl::ArmorReaderImpl():
+        crc24_(Botan::HashFunction::create_or_throw("CRC24")),
+        finish_(false),
+        result_(Result::None),
+        status_(ArmorStatus::Unknown),
+        out_(nullptr)
     {
-        LOG_INFO << "Transition to state: " << static_cast<int>(state);
-        state_ = state;
     }
 
-    bool ArmorReader::Continue()
-    {
-        switch(emsg_result_)
-        {
-            case EmsgResult::Pending:
-            case EmsgResult::UnexpectedError:
-            case EmsgResult::UnexpectedFormat:
-                return false;
-            default:
-                break;
-        }
-
-        switch(state_)
-        {
-            case ArmorState::Disabled:
-            case ArmorState::TailFound:
-                return false;
-            default:
-                break;
-        }
-
-        return true;
-    }
-
-    EmsgResult ArmorReader::Read(OutStream &out)
-    {
-        Result result = Result::None;
-        emsg_result_ = EmsgResult::None;
-
-        while(Continue())
-        {
-            switch(state_)
-            {
-                case ArmorState::Unknown:
-                    result = ReadUnknown();
-                    switch(result)
-                    {
-                        case Result::Disabled:
-                            emsg_result_ = EmsgResult::Success;
-                            SetState(ArmorState::Disabled);
-                            break;
-                        case Result::Pending:
-                            emsg_result_ = EmsgResult::Pending;
-                            break;
-                        case Result::MinHeader:
-                            SetState(ArmorState::BeginHeader);
-                            break;
-                        default:
-                            emsg_result_ = EmsgResult::UnexpectedError;
-                            assert(false);
-                            break;
-                    }
-                    break;
-                case ArmorState::BeginHeader:
-                    result = ReadBeginHeader();
-                    switch(result)
-                    {
-                        case Result::UnexpectedFormat:
-                            emsg_result_ = EmsgResult::UnexpectedFormat;
-                            break;
-                        case Result::Pending:
-                            emsg_result_ = EmsgResult::Pending;
-                            break;
-                        case Result::Success:
-                            SetState(ArmorState::Header);
-                            break;
-                        default:
-                            emsg_result_ = EmsgResult::UnexpectedError;
-                            assert(false);
-                            break;
-
-                    }
-                    break;
-                case ArmorState::Header:
-                    result = ReadHeader();
-                    switch(result)
-                    {
-                        case Result::UnexpectedFormat:
-                            emsg_result_ = EmsgResult::UnexpectedFormat;
-                            break;
-                        case Result::Pending:
-                            emsg_result_ = EmsgResult::Pending;
-                            break;
-                        case Result::Success:
-                            SetState(ArmorState::Payload);
-                            break;
-                        default:
-                            emsg_result_ = EmsgResult::UnexpectedError;
-                            assert(false);
-                            break;
-                    }
-                    break;
-                case ArmorState::Payload:
-                    result = ReadPayload(out);
-                    switch(result)
-                    {
-                        case Result::UnexpectedFormat:
-                            emsg_result_ = EmsgResult::UnexpectedFormat;
-                            break;
-                        case Result::Pending:
-                            emsg_result_ = EmsgResult::Pending;
-                            break;
-                        case Result::Success:
-                            SetState(ArmorState::CRC);
-                            break;
-                        default:
-                            emsg_result_ = EmsgResult::UnexpectedError;
-                            assert(false);
-                            break;
-                    }
-                    break;
-
-                case ArmorState::CRC:
-                    result = ReadCRC();
-                    switch(result)
-                    {
-                        case Result::UnexpectedFormat:
-                            emsg_result_ = EmsgResult::UnexpectedFormat;
-                            break;
-                        case Result::Pending:
-                            emsg_result_ = EmsgResult::Pending;
-                            break;
-                        case Result::Success:
-                            SetState(ArmorState::Tail);
-                            break;
-                        default:
-                            emsg_result_ = EmsgResult::UnexpectedError;
-                            assert(false);
-                            break;
-
-                    }
-                    break;
-                case ArmorState::Tail:
-                    result = ReadTail();
-                    switch(result)
-                    {
-                        case Result::UnexpectedFormat:
-                            emsg_result_ = EmsgResult::UnexpectedFormat;
-                            break;
-                        case Result::Pending:
-                            emsg_result_ = EmsgResult::Pending;
-                            break;
-                        case Result::Success:
-                            emsg_result_ = EmsgResult::Success;
-                            SetState(ArmorState::TailFound);
-                            break;
-                        default:
-                            emsg_result_ = EmsgResult::UnexpectedError;
-                            assert(false);
-                            break;
-                    }
-                    break;
-                default:
-                    emsg_result_ = EmsgResult::UnexpectedError;
-                    assert(false);
-                    break;
-            }
-        }
-
-        if(emsg_result_ == EmsgResult::None)
-            emsg_result_ = EmsgResult::UnexpectedError;
-
-        return emsg_result_;
-    }
-
-    Result ArmorReader::ReadUnknown()
+    Result ArmorReaderImpl::ReadUnknown()
     {
         // when we finish, we return the data to in_stm_
         // in other states we keep the data in buffer_
 
-        if(in_stm_.GetCount() < kMinHeader.size())
+        PushBackToBuffer(in_stm_, buffer_);
+        if(buffer_.size() < kMinHeader.size())
         {
             if(!finish_)
                 return Result::Pending;
+            else
+            {
+                in_stm_.Push(buffer_);
+                return Result::Disabled;
+            }
         }
 
-        SafeVector received(kMinHeader.size(), 0);
-        in_stm_.Read(received.data(), received.size());
-        SafeVector remainder;
-        AppendToBuffer(in_stm_, remainder);
-        in_stm_.Push(received);
-        in_stm_.Push(remainder);
-        return std::equal(kMinHeader.begin(), kMinHeader.end(), received.begin()) ?
-            Result::MinHeader : Result::Disabled;
+        result_ = std::equal(kMinHeader.begin(), kMinHeader.end(), buffer_.begin()) ?
+            Result::Success : Result::Disabled;
+
+        in_stm_.Push(buffer_);
+        buffer_.clear();
+        return result_;
     }
 
-    Result ArmorReader::ReadBeginHeader()
+    Result ArmorReaderImpl::ReadBeginHeader()
     {
         auto line_result = NextLine();
         if(line_result.max_length_reached)
@@ -250,7 +220,7 @@ namespace EncryptMsg
             Result::Success : Result::UnexpectedFormat;
     }
 
-    Result ArmorReader::ReadHeader()
+    Result ArmorReaderImpl::ReadHeader()
     {
         auto line_result = NextLine();
         while(line_result.success)
@@ -269,7 +239,7 @@ namespace EncryptMsg
         return Result::Pending;
     }
 
-    Result ArmorReader::ReadPayload(OutStream &out)
+    Result ArmorReaderImpl::ReadPayload(OutStream &out)
     {
         using namespace Botan;
         auto line_result = NextLine();
@@ -310,7 +280,7 @@ namespace EncryptMsg
         return Result::Pending;
     }
 
-    Result ArmorReader::ReadCRC()
+    Result ArmorReaderImpl::ReadCRC()
     {
         using namespace Botan;
         auto line_result = NextLine();
@@ -337,7 +307,7 @@ namespace EncryptMsg
         return Result::Success;
     }
 
-    Result ArmorReader::ReadTail()
+    Result ArmorReaderImpl::ReadTail()
     {
         auto line_result = NextLine();
         if(line_result.max_length_reached)
@@ -362,7 +332,7 @@ namespace EncryptMsg
         return Result::Success;
     }
 
-    bool ArmorReader::ValidateCRC(const std::string &crc)
+    bool ArmorReaderImpl::ValidateCRC(const std::string &crc)
     {
         using namespace Botan;
         auto computed_crc = crc24_->final();
@@ -375,31 +345,9 @@ namespace EncryptMsg
         return crc == computed_crc_str;
     }
 
-    EmsgResult ArmorReader::Finish(OutStream &out)
+    LineResult ArmorReaderImpl::NextLine()
     {
-        finish_ = true;
-        if(state_ == ArmorState::TailFound)
-        {
-            emsg_result_ = EmsgResult::Success;
-            return emsg_result_;
-        }
-
-        emsg_result_ = Read(out);
-
-        if(emsg_result_ != EmsgResult::Success)
-            return emsg_result_;
-
-        if(state_ != ArmorState::TailFound)
-        {
-            LOG_WARNING << "UnexpectedError: invalid state after finish";
-            return EmsgResult::UnexpectedError;
-        }
-        return EmsgResult::Success;
-    }
-
-    ArmorReader::LineResult ArmorReader::NextLine()
-    {
-        ArmorReader::LineResult result;
+        LineResult result;
         PushBackToBuffer(in_stm_, buffer_);
         auto it = std::find(buffer_.begin(), buffer_.end(), '\n');
         if(it == buffer_.end())
@@ -416,4 +364,186 @@ namespace EncryptMsg
         return result;
     }
 
+    bool Shared_CanEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        if(reader.result_ == Result::Pending && context.IsReentry())
+            return true;
+
+        if(reader.result_ == Result::Success && !context.IsReentry())
+            return true;
+
+        return false;
+    }
+
+    bool IsNotPendingOrBuffer(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        return (reader.result_ != Result::Pending || reader.in_stm_.GetCount() > 0);
+    }
+
+    // Unknown
+
+    bool Unknown_CanEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        switch(reader.result_)
+        {
+            case Result::None:
+            case Result::Pending:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    void Unknown_OnEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        reader.result_ = reader.ReadUnknown();
+    }
+
+    // Disabled
+
+    bool Disabled_CanEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        return (reader.result_ == Result::Disabled);
+    }
+
+    void Disabled_OnEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        reader.status_ = ArmorStatus::Disabled;
+    }
+
+    // BeginHeader
+
+    void BeginHeader_OnEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        reader.status_ = ArmorStatus::Enabled;
+        reader.result_ = reader.ReadBeginHeader();
+    }
+
+    // Header
+
+    void Header_OnEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        reader.result_ = reader.ReadHeader();
+    }
+
+    void Payload_OnEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        reader.result_ = reader.ReadPayload(*reader.out_);
+    }
+
+    void CRC_OnEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        reader.result_ = reader.ReadCRC();
+    }
+
+    void Tail_OnEnter(StateMachineContext& context)
+    {
+        auto &reader = context.Extra<ArmorReaderImpl>();
+        reader.result_ = reader.ReadTail();
+    }
+
+    void TailFound_OnEnter(StateMachineContext&)
+    {
+    }
+
+    void Fail_OnEnter(StateMachineContext& context)
+    {
+        context.SetFailed(true);
+    }
+
+    ArmorGraph::ArmorGraph()
+    {
+        auto I = [this](ArmorState state_id, VoidFunction on_enter, BoolFunction can_enter)
+        {
+            states[state_id] = graph.insert(
+                    State(state_id, on_enter, StubVoidFunction, can_enter, IsNotPendingOrBuffer));
+        };
+
+        auto L = [this](ArmorState l, ArmorState r)
+        {
+            graph.arc_insert(states[l], states[r]);
+        };
+
+        states[ArmorState::Start] = graph.insert(State(ArmorState::Start));
+        states[ArmorState::Fail] = graph.insert(State(ArmorState::Fail, Fail_OnEnter));
+
+        I(ArmorState::Unknown, Unknown_OnEnter, Unknown_CanEnter);
+        I(ArmorState::BeginHeader, BeginHeader_OnEnter, Shared_CanEnter);
+        I(ArmorState::Header, Header_OnEnter, Shared_CanEnter);
+        I(ArmorState::Payload, Payload_OnEnter, Shared_CanEnter);
+        I(ArmorState::CRC, CRC_OnEnter, Shared_CanEnter);
+        I(ArmorState::Tail, Tail_OnEnter, Shared_CanEnter);
+        I(ArmorState::TailFound, TailFound_OnEnter, Shared_CanEnter);
+        I(ArmorState::Disabled, Disabled_OnEnter, Disabled_CanEnter);
+
+        states[ArmorState::Disabled]->SetCanExit(AlwaysFalseBoolFunction);
+        states[ArmorState::TailFound]->SetCanExit(AlwaysFalseBoolFunction);
+
+        L(ArmorState::Start, ArmorState::Unknown);
+
+        L(ArmorState::Unknown, ArmorState::Unknown);
+        L(ArmorState::Unknown, ArmorState::Disabled);
+        L(ArmorState::Unknown, ArmorState::BeginHeader);
+
+        L(ArmorState::BeginHeader, ArmorState::BeginHeader);
+        L(ArmorState::BeginHeader, ArmorState::Header);
+
+        L(ArmorState::Header, ArmorState::Header);
+        L(ArmorState::Header, ArmorState::Payload);
+
+        L(ArmorState::Payload, ArmorState::Payload);
+        L(ArmorState::Payload, ArmorState::CRC);
+
+        L(ArmorState::CRC, ArmorState::Tail);
+
+        L(ArmorState::Tail, ArmorState::Tail);
+        L(ArmorState::Tail, ArmorState::TailFound);
+    }
+
+    EmsgResult ArmorReaderImpl::Read(StateMachine &state_machine, StateMachineContext &context, OutStream &out)
+    {
+        if(result_ == Result::Success)
+            return EmsgResult::Success;
+
+        out_ = &out;
+
+        while(state_machine.NextState())
+        {
+        }
+
+        if(context.GetFailed())
+        {
+            return EmsgResult::UnexpectedError;
+        }
+
+        switch(result_)
+        {
+            case Result::Success:
+            case Result::Disabled:
+                return EmsgResult::Success;
+            case Result::UnexpectedFormat:
+                return EmsgResult::UnexpectedFormat;
+            case Result::Pending:
+                return EmsgResult::Pending;
+            default:
+                assert(false);
+                return EmsgResult::UnexpectedError;
+        }
+    }
+
+    EmsgResult ArmorReaderImpl::Finish(StateMachine &state_machine, StateMachineContext &context, OutStream &out)
+    {
+        finish_ = true;
+        return Read(state_machine, context, out);
+    }
 }

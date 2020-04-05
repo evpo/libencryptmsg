@@ -139,8 +139,7 @@ namespace EncryptMsg
         packet_factory_(session_state_), analyze_only_(analyze_only)
     {
         context_.SetState(session_state_);
-        state_machine_.SetStateIDToStringConverter(
-                std::unique_ptr<EmsgStateIDToStringConverter>(new EmsgStateIDToStringConverter()));
+        state_machine_.SetStateIDToStringConverter(EmsgStateIDToStringConverter);
     }
 
     void MessageReaderImpl::Start()

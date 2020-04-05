@@ -7,6 +7,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <functional>
 #include "state_machine_utility.h"
 #include "state_machine_type_erasure.h"
 
@@ -29,14 +30,24 @@ namespace LightStateMachine
     {
         private:
             bool failed_;
+            bool is_reentry_;
             TypeErasure extra_context_;
         public:
             bool GetFailed() const;
             void SetFailed(bool value);
+
+            // The flag is tested in CanEnter and OnEnter
+            // to check if we reenter the current state
+            bool IsReentry() const;
+
+            // It's for internal use from the state machine
+            void SetIsReentry(bool is_reentry);
+
             StateMachineContext();
 
             template<class T>
             StateMachineContext(std::shared_ptr<T> extra_context):
+                failed_(false),
                 extra_context_(extra_context)
             {
             }
@@ -60,12 +71,6 @@ namespace LightStateMachine
             }
     };
 
-    // Inherit this class to trace application specific state ids
-    class StateIDToStringConverter: public NonCopyable
-    {
-        public:
-            virtual std::string Convert(StateMachineStateID state_id) = 0;
-            virtual std::string StateMachineName() = 0;
-            virtual ~StateIDToStringConverter(){}
-    };
+    // Define this function type to trace application specific state ids
+    using StateIDToStringConverter = std::function<std::string(StateMachineStateID)>;
 }

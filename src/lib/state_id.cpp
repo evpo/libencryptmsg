@@ -26,4 +26,9 @@ namespace EncryptMsg
         };
         return state_id2string[state_id];
     }
+
+    std::string EmsgStateIDToStringConverter(LightStateMachine::StateMachineStateID state_id)
+    {
+        return string("emsg:") + PrintStateID(static_cast<StateID>(state_id));
+    }
 }

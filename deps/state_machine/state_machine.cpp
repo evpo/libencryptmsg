@@ -19,9 +19,9 @@ using namespace std;
 namespace
 {
 #ifdef TRACE_STATE_MACHINE
-    void DebugPrintState(std::string state_machine_name, std::string str)
+    void DebugPrintState(std::string str)
     {
-        LOG_DEBUG << "SM:" << state_machine_name << ": " << str;
+        LOG_DEBUG << str;
     }
 #endif
 }
@@ -32,19 +32,12 @@ namespace LightStateMachine
 
     unsigned kQueueSize = 3U;
 
-    class StandardStateIDToStringConverter : public StateIDToStringConverter
-    {
-        public:
-            std::string Convert(StateMachineStateID state_id) override
-            {
-                return std::string("state_id = ") + std::to_string(state_id);
-            }
+    std::string StandardStateIDToStringConverter(StateMachineStateID state_id);
 
-            std::string StateMachineName() override
-            {
-                return "default";
-            }
-    };
+    std::string StandardStateIDToStringConverter(StateMachineStateID state_id)
+    {
+        return std::string("default : state_id = ") + std::to_string(state_id);
+    }
 
     StateMachine::StateMachine(StateGraph &state_graph, StateGraph::iterator start_state, StateGraph::iterator fail_state, StateMachineContext &context)
         :
@@ -53,13 +46,13 @@ namespace LightStateMachine
             current_state_(start_state),
             fail_state_(fail_state),
             context_(&context),
-            state_id_to_string_converter_(new StandardStateIDToStringConverter())
+            state_id_to_string_converter_(StandardStateIDToStringConverter)
     {
     }
 
-    void StateMachine::SetStateIDToStringConverter(std::unique_ptr<StateIDToStringConverter> converter)
+    void StateMachine::SetStateIDToStringConverter(StateIDToStringConverter converter)
     {
-        state_id_to_string_converter_ = std::move(converter);
+        state_id_to_string_converter_ = converter;
     }
 
     void StateMachine::Reset()
@@ -73,24 +66,31 @@ namespace LightStateMachine
         if(!current_state_->CanExit(*context_))
             return false;
 
+        bool state_changed = false;
         for(unsigned i = 0U; i < state_graph_->fanout(current_state_); i ++)
         {
             auto arc_it = state_graph_->output(current_state_, i);
             auto it = state_graph_->arc_to(arc_it);
+            context_->SetIsReentry(current_state_->GetID() == it->GetID());
             if(it->CanEnter(*context_))
             {
                 current_state_->OnExit(*context_);
                 SetCurrentState(it);
                 current_state_->OnEnter(*context_);
-                if(context_->GetFailed())
-                {
-                    break;
-                }
-                else
-                {
-                    return true;
-                }
+                state_changed = !context_->GetFailed();
+
+                break;
             }
+        }
+
+        context_->SetIsReentry(false);
+        if(state_changed)
+            return true;
+
+        // check if we are already in fail_state. It should not be reentrant
+        if(current_state_->GetID() == fail_state_->GetID())
+        {
+            return false;
         }
 
         if(fail_state_->CanEnter(*context_))
@@ -116,7 +116,7 @@ namespace LightStateMachine
         }
         current_state_ = new_state;
 #ifdef TRACE_STATE_MACHINE
-        DebugPrintState(state_id_to_string_converter_->StateMachineName(), state_id_to_string_converter_->Convert(current_state_->GetID()));
+        DebugPrintState(state_id_to_string_converter_(current_state_->GetID()));
 #endif
     }
 

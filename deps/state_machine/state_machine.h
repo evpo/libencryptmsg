@@ -22,7 +22,7 @@ namespace LightStateMachine
             StateMachineStateID CurrentState() const;
             StateMachineStateID PreviousState() const;
             void Reset();
-            void SetStateIDToStringConverter(std::unique_ptr<StateIDToStringConverter> converter);
+            void SetStateIDToStringConverter(StateIDToStringConverter converter);
         private:
             void SetCurrentState(StateGraph::iterator new_state);
             StateGraph *state_graph_;
@@ -31,6 +31,6 @@ namespace LightStateMachine
             StateGraph::iterator fail_state_;
             StateMachineContext *context_;
             std::queue<StateMachineStateID> state_queue_;
-            std::unique_ptr<StateIDToStringConverter> state_id_to_string_converter_;
+            StateIDToStringConverter state_id_to_string_converter_;
     };
 }
