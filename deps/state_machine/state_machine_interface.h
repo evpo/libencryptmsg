@@ -6,7 +6,6 @@
 //**********************************************************************************
 #pragma once
 #include <string>
-#include <memory>
 #include <functional>
 #include "state_machine_utility.h"
 #include "state_machine_type_erasure.h"
@@ -46,14 +45,14 @@ namespace LightStateMachine
             StateMachineContext();
 
             template<class T>
-            StateMachineContext(std::shared_ptr<T> extra_context):
+            StateMachineContext(T *extra_context):
                 failed_(false),
                 extra_context_(extra_context)
             {
             }
 
             template<class T>
-            void SetExtra(std::shared_ptr<T> extra_context)
+            void SetExtra(T *extra_context)
             {
                 extra_context_ = extra_context;
             }

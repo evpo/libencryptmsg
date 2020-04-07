@@ -39,14 +39,10 @@ namespace LightStateMachine
         return std::string("default : state_id = ") + std::to_string(state_id);
     }
 
-    StateMachine::StateMachine(StateGraph &state_graph, StateGraph::iterator start_state, StateGraph::iterator fail_state, StateMachineContext &context)
-        :
-            state_graph_(&state_graph),
-            start_state_(start_state),
-            current_state_(start_state),
-            fail_state_(fail_state),
-            context_(&context),
-            state_id_to_string_converter_(StandardStateIDToStringConverter)
+    StateMachine::StateMachine(StateGraph &state_graph, StateMachineContext &context)
+        :state_graph_(&state_graph),
+        is_first_entry_(true),
+        context_(&context)
     {
     }
 
@@ -63,14 +59,22 @@ namespace LightStateMachine
 
     bool StateMachine::NextState()
     {
+        if(is_first_entry_)
+        {
+            start_state_ = state_graph_->StatesMap()[state_graph_->GetStartStateID()];
+            current_state_ = start_state_;
+            fail_state_ = state_graph_->StatesMap()[state_graph_->GetFailStateID()];
+            is_first_entry_ = false;
+        }
+
         if(!current_state_->CanExit(*context_))
             return false;
 
         bool state_changed = false;
-        for(unsigned i = 0U; i < state_graph_->fanout(current_state_); i ++)
+        for(unsigned i = 0U; i < state_graph_->GetGraph().fanout(current_state_); i ++)
         {
-            auto arc_it = state_graph_->output(current_state_, i);
-            auto it = state_graph_->arc_to(arc_it);
+            auto arc_it = state_graph_->GetGraph().output(current_state_, i);
+            auto it = state_graph_->GetGraph().arc_to(arc_it);
             context_->SetIsReentry(current_state_->GetID() == it->GetID());
             if(it->CanEnter(*context_))
             {
@@ -107,7 +111,7 @@ namespace LightStateMachine
         return current_state_->GetID();
     }
 
-    void StateMachine::SetCurrentState(StateGraph::iterator new_state)
+    void StateMachine::SetCurrentState(DigraphIt new_state)
     {
         state_queue_.push(current_state_->GetID());
         while(state_queue_.size() > kQueueSize)

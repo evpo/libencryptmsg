@@ -15,8 +15,8 @@ namespace LightStateMachine
             template<class T>
             struct Storage final : public StorageBase
             {
-                std::shared_ptr<T> value_;
-                Storage(std::shared_ptr<T> value)
+                T* value_;
+                Storage(T *value)
                     :value_(value)
                 {
 
@@ -32,13 +32,13 @@ namespace LightStateMachine
             TypeErasure() = default;
 
             template<class T>
-            TypeErasure(std::shared_ptr<T> value):
+            TypeErasure(T *value):
                 storage_(new Storage<T>(value))
             {
             }
 
             template<class T>
-            const TypeErasure& operator=(std::shared_ptr<T> value)
+            const TypeErasure& operator=(T *value)
             {
                 storage_.reset(new Storage<T>(value));
                 return *this;

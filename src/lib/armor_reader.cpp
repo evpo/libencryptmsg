@@ -85,7 +85,11 @@ namespace EncryptMsg
         bool finish_;
         Result result_;
         ArmorStatus status_;
-        std::unique_ptr<StateMachine> state_machine_;
+
+        StateMachineContext context_;
+        StateGraph state_graph_;
+        StateMachine state_machine_;
+
         OutStream *out_;
 
         bool ValidateCRC(const std::string &crc);
@@ -99,18 +103,10 @@ namespace EncryptMsg
 
         ArmorReaderImpl();
 
-        EmsgResult Read(StateMachine &state_machine, StateMachineContext &context, OutStream &out);
-        EmsgResult Finish(StateMachine &state_machine, StateMachineContext &context, OutStream &out);
+        EmsgResult Read(OutStream &out);
+        EmsgResult Finish(OutStream &out);
     };
 
-    struct ArmorGraph
-    {
-        StateGraph graph;
-        std::map<ArmorState, StateGraph::iterator> states;
-        ArmorGraph();
-    };
-
-    ArmorGraph &GetArmorGraph();
     bool Shared_CanEnter(StateMachineContext& context);
     bool IsNotPendingOrBuffer(StateMachineContext& context);
     bool Unknown_CanEnter(StateMachineContext& context);
@@ -125,12 +121,6 @@ namespace EncryptMsg
     void TailFound_OnEnter(StateMachineContext& context);
     void Fail_OnEnter(StateMachineContext& context);
 
-    ArmorGraph &GetArmorGraph()
-    {
-        static ArmorGraph graph;
-        return graph;
-    }
-
     InBufferStream &ArmorReader::GetInStream()
     {
         return pimpl_->in_stm_;
@@ -143,22 +133,16 @@ namespace EncryptMsg
 
     EmsgResult ArmorReader::Read(OutStream &out)
     {
-        return pimpl_->Read(*state_machine_, *context_, out);
+        return pimpl_->Read(out);
     }
     EmsgResult ArmorReader::Finish(OutStream &out)
     {
-        return pimpl_->Finish(*state_machine_, *context_, out);
+        return pimpl_->Finish(out);
     }
 
     ArmorReader::ArmorReader():
-        pimpl_(new ArmorReaderImpl()),
-        context_(new StateMachineContext(pimpl_)),
-        state_machine_(new StateMachine(GetArmorGraph().graph,
-                    GetArmorGraph().states[ArmorState::Start],
-                    GetArmorGraph().states[ArmorState::Fail],
-                    *context_))
+        pimpl_(new ArmorReaderImpl())
     {
-        state_machine_->SetStateIDToStringConverter(GetStateName);
     }
 
     ArmorReader::~ArmorReader()
@@ -170,8 +154,56 @@ namespace EncryptMsg
         finish_(false),
         result_(Result::None),
         status_(ArmorStatus::Unknown),
+        context_(this),
+        state_machine_(state_graph_, context_),
         out_(nullptr)
     {
+        state_machine_.SetStateIDToStringConverter(GetStateName);
+        auto &sg = state_graph_;
+
+        sg.Create(ArmorState::Start);
+        sg.Create(ArmorState::Fail, Fail_OnEnter);
+        sg.SetStartStateID(ArmorState::Start);
+        sg.SetFailStateID(ArmorState::Fail);
+
+        sg.Create(ArmorState::Unknown, Unknown_OnEnter, StubVoidFunction, Unknown_CanEnter, IsNotPendingOrBuffer);
+
+        sg.Create(ArmorState::BeginHeader, BeginHeader_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+
+        sg.Create(ArmorState::Header, Header_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+
+        sg.Create(ArmorState::Payload, Payload_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+
+        sg.Create(ArmorState::CRC, CRC_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+
+        sg.Create(ArmorState::Tail, Tail_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+
+        sg.Create(ArmorState::TailFound, TailFound_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+
+        sg.Create(ArmorState::Disabled, Disabled_OnEnter, StubVoidFunction, Disabled_CanEnter, IsNotPendingOrBuffer);
+
+        sg.Get(ArmorState::Disabled).SetCanExit(AlwaysFalseBoolFunction);
+        sg.Get(ArmorState::TailFound).SetCanExit(AlwaysFalseBoolFunction);
+
+        sg.Link(ArmorState::Start, ArmorState::Unknown);
+
+        sg.Link(ArmorState::Unknown, ArmorState::Unknown);
+        sg.Link(ArmorState::Unknown, ArmorState::Disabled);
+        sg.Link(ArmorState::Unknown, ArmorState::BeginHeader);
+
+        sg.Link(ArmorState::BeginHeader, ArmorState::BeginHeader);
+        sg.Link(ArmorState::BeginHeader, ArmorState::Header);
+
+        sg.Link(ArmorState::Header, ArmorState::Header);
+        sg.Link(ArmorState::Header, ArmorState::Payload);
+
+        sg.Link(ArmorState::Payload, ArmorState::Payload);
+        sg.Link(ArmorState::Payload, ArmorState::CRC);
+
+        sg.Link(ArmorState::CRC, ArmorState::Tail);
+
+        sg.Link(ArmorState::Tail, ArmorState::Tail);
+        sg.Link(ArmorState::Tail, ArmorState::TailFound);
     }
 
     Result ArmorReaderImpl::ReadUnknown()
@@ -461,67 +493,18 @@ namespace EncryptMsg
         context.SetFailed(true);
     }
 
-    ArmorGraph::ArmorGraph()
-    {
-        auto I = [this](ArmorState state_id, VoidFunction on_enter, BoolFunction can_enter)
-        {
-            states[state_id] = graph.insert(
-                    State(state_id, on_enter, StubVoidFunction, can_enter, IsNotPendingOrBuffer));
-        };
-
-        auto L = [this](ArmorState l, ArmorState r)
-        {
-            graph.arc_insert(states[l], states[r]);
-        };
-
-        states[ArmorState::Start] = graph.insert(State(ArmorState::Start));
-        states[ArmorState::Fail] = graph.insert(State(ArmorState::Fail, Fail_OnEnter));
-
-        I(ArmorState::Unknown, Unknown_OnEnter, Unknown_CanEnter);
-        I(ArmorState::BeginHeader, BeginHeader_OnEnter, Shared_CanEnter);
-        I(ArmorState::Header, Header_OnEnter, Shared_CanEnter);
-        I(ArmorState::Payload, Payload_OnEnter, Shared_CanEnter);
-        I(ArmorState::CRC, CRC_OnEnter, Shared_CanEnter);
-        I(ArmorState::Tail, Tail_OnEnter, Shared_CanEnter);
-        I(ArmorState::TailFound, TailFound_OnEnter, Shared_CanEnter);
-        I(ArmorState::Disabled, Disabled_OnEnter, Disabled_CanEnter);
-
-        states[ArmorState::Disabled]->SetCanExit(AlwaysFalseBoolFunction);
-        states[ArmorState::TailFound]->SetCanExit(AlwaysFalseBoolFunction);
-
-        L(ArmorState::Start, ArmorState::Unknown);
-
-        L(ArmorState::Unknown, ArmorState::Unknown);
-        L(ArmorState::Unknown, ArmorState::Disabled);
-        L(ArmorState::Unknown, ArmorState::BeginHeader);
-
-        L(ArmorState::BeginHeader, ArmorState::BeginHeader);
-        L(ArmorState::BeginHeader, ArmorState::Header);
-
-        L(ArmorState::Header, ArmorState::Header);
-        L(ArmorState::Header, ArmorState::Payload);
-
-        L(ArmorState::Payload, ArmorState::Payload);
-        L(ArmorState::Payload, ArmorState::CRC);
-
-        L(ArmorState::CRC, ArmorState::Tail);
-
-        L(ArmorState::Tail, ArmorState::Tail);
-        L(ArmorState::Tail, ArmorState::TailFound);
-    }
-
-    EmsgResult ArmorReaderImpl::Read(StateMachine &state_machine, StateMachineContext &context, OutStream &out)
+    EmsgResult ArmorReaderImpl::Read(OutStream &out)
     {
         if(result_ == Result::Success)
             return EmsgResult::Success;
 
         out_ = &out;
 
-        while(state_machine.NextState())
+        while(state_machine_.NextState())
         {
         }
 
-        if(context.GetFailed())
+        if(context_.GetFailed())
         {
             return EmsgResult::UnexpectedError;
         }
@@ -541,9 +524,9 @@ namespace EncryptMsg
         }
     }
 
-    EmsgResult ArmorReaderImpl::Finish(StateMachine &state_machine, StateMachineContext &context, OutStream &out)
+    EmsgResult ArmorReaderImpl::Finish(OutStream &out)
     {
         finish_ = true;
-        return Read(state_machine, context, out);
+        return Read(out);
     }
 }

@@ -4,18 +4,8 @@
 #include "packet_reader.h"
 #include <vector>
 #include <string>
+#include <memory>
 
-namespace Botan
-{
-    class HashFunction;
-    class Pipe;
-}
-namespace LightStateMachine
-{
-    class StateMachineContext;
-    class StateMachine;
-
-}
 namespace EncryptMsg
 {
     enum class ArmorStatus
@@ -29,9 +19,7 @@ namespace EncryptMsg
     class ArmorReader final : public NonCopyableNonMovable
     {
         private:
-            std::shared_ptr<ArmorReaderImpl> pimpl_;
-            std::unique_ptr<LightStateMachine::StateMachineContext> context_;
-            std::unique_ptr<LightStateMachine::StateMachine> state_machine_;
+            std::unique_ptr<ArmorReaderImpl> pimpl_;
         public:
             ArmorReader();
             ~ArmorReader();
