@@ -95,31 +95,32 @@ namespace EncryptMsg
         bool ValidateCRC(const std::string &crc);
         LineResult NextLine();
         Result ReadUnknown();
+        void Unknown_OnEnter(StateMachineContext& context);
+
         Result ReadBeginHeader();
         Result ReadHeader();
         Result ReadPayload(OutStream &out);
         Result ReadCRC();
         Result ReadTail();
 
+        bool Shared_CanEnter(StateMachineContext& context);
+        bool IsNotPendingOrBuffer(StateMachineContext& context);
+        bool Unknown_CanEnter(StateMachineContext& context);
+        bool Disabled_CanEnter(StateMachineContext& context);
+        void Disabled_OnEnter(StateMachineContext& context);
+        void BeginHeader_OnEnter(StateMachineContext& context);
+        void Header_OnEnter(StateMachineContext& context);
+        void Payload_OnEnter(StateMachineContext& context);
+        void CRC_OnEnter(StateMachineContext& context);
+        void Tail_OnEnter(StateMachineContext& context);
+        void TailFound_OnEnter(StateMachineContext& context);
+        void Fail_OnEnter(StateMachineContext& context);
+
         ArmorReaderImpl();
 
         EmsgResult Read(OutStream &out);
         EmsgResult Finish(OutStream &out);
     };
-
-    bool Shared_CanEnter(StateMachineContext& context);
-    bool IsNotPendingOrBuffer(StateMachineContext& context);
-    bool Unknown_CanEnter(StateMachineContext& context);
-    void Unknown_OnEnter(StateMachineContext& context);
-    bool Disabled_CanEnter(StateMachineContext& context);
-    void Disabled_OnEnter(StateMachineContext& context);
-    void BeginHeader_OnEnter(StateMachineContext& context);
-    void Header_OnEnter(StateMachineContext& context);
-    void Payload_OnEnter(StateMachineContext& context);
-    void CRC_OnEnter(StateMachineContext& context);
-    void Tail_OnEnter(StateMachineContext& context);
-    void TailFound_OnEnter(StateMachineContext& context);
-    void Fail_OnEnter(StateMachineContext& context);
 
     InBufferStream &ArmorReader::GetInStream()
     {
@@ -154,33 +155,51 @@ namespace EncryptMsg
         finish_(false),
         result_(Result::None),
         status_(ArmorStatus::Unknown),
-        context_(this),
         state_machine_(state_graph_, context_),
         out_(nullptr)
     {
+        using VoidMember = VoidMemberFunction<ArmorReaderImpl>;
+        using BoolMember = BoolMemberFunction<ArmorReaderImpl>;
+        using Self = ArmorReaderImpl;
         state_machine_.SetStateIDToStringConverter(GetStateName);
         auto &sg = state_graph_;
 
         sg.Create(ArmorState::Start);
-        sg.Create(ArmorState::Fail, Fail_OnEnter);
+        sg.Create(ArmorState::Fail, VoidMember(this, &ArmorReaderImpl::Fail_OnEnter));
         sg.SetStartStateID(ArmorState::Start);
         sg.SetFailStateID(ArmorState::Fail);
 
-        sg.Create(ArmorState::Unknown, Unknown_OnEnter, StubVoidFunction, Unknown_CanEnter, IsNotPendingOrBuffer);
+        sg.Create(ArmorState::Unknown,
+                VoidMember(this, &Self::Unknown_OnEnter), StubVoidFunction,
+                BoolMember(this, &Self::Unknown_CanEnter), BoolMember(this, &Self::IsNotPendingOrBuffer));
 
-        sg.Create(ArmorState::BeginHeader, BeginHeader_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+        sg.Create(ArmorState::BeginHeader,
+                VoidMember(this, &Self::BeginHeader_OnEnter), StubVoidFunction,
+                BoolMember(this, &Self::Shared_CanEnter), BoolMember(this, &Self::IsNotPendingOrBuffer));
 
-        sg.Create(ArmorState::Header, Header_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+        sg.Create(ArmorState::Header,
+                VoidMember(this, &Self::Header_OnEnter), StubVoidFunction,
+                BoolMember(this, &Self::Shared_CanEnter), BoolMember(this, &Self::IsNotPendingOrBuffer));
 
-        sg.Create(ArmorState::Payload, Payload_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+        sg.Create(ArmorState::Payload,
+                VoidMember(this, &Self::Payload_OnEnter), StubVoidFunction,
+                BoolMember(this, &Self::Shared_CanEnter), BoolMember(this, &Self::IsNotPendingOrBuffer));
 
-        sg.Create(ArmorState::CRC, CRC_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+        sg.Create(ArmorState::CRC,
+                VoidMember(this, &Self::CRC_OnEnter), StubVoidFunction,
+                BoolMember(this, &Self::Shared_CanEnter), BoolMember(this, &Self::IsNotPendingOrBuffer));
 
-        sg.Create(ArmorState::Tail, Tail_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+        sg.Create(ArmorState::Tail,
+                VoidMember(this, &Self::Tail_OnEnter), StubVoidFunction,
+                BoolMember(this, &Self::Shared_CanEnter), BoolMember(this, &Self::IsNotPendingOrBuffer));
 
-        sg.Create(ArmorState::TailFound, TailFound_OnEnter, StubVoidFunction, Shared_CanEnter, IsNotPendingOrBuffer);
+        sg.Create(ArmorState::TailFound,
+                VoidMember(this, &Self::TailFound_OnEnter), StubVoidFunction,
+                BoolMember(this, &Self::Shared_CanEnter), BoolMember(this, &Self::IsNotPendingOrBuffer));
 
-        sg.Create(ArmorState::Disabled, Disabled_OnEnter, StubVoidFunction, Disabled_CanEnter, IsNotPendingOrBuffer);
+        sg.Create(ArmorState::Disabled,
+                VoidMember(this, &Self::Disabled_OnEnter), StubVoidFunction,
+                BoolMember(this, &Self::Disabled_CanEnter), BoolMember(this, &Self::IsNotPendingOrBuffer));
 
         sg.Get(ArmorState::Disabled).SetCanExit(AlwaysFalseBoolFunction);
         sg.Get(ArmorState::TailFound).SetCanExit(AlwaysFalseBoolFunction);
@@ -396,30 +415,27 @@ namespace EncryptMsg
         return result;
     }
 
-    bool Shared_CanEnter(StateMachineContext& context)
+    bool ArmorReaderImpl::Shared_CanEnter(StateMachineContext& context)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        if(reader.result_ == Result::Pending && context.IsReentry())
+        if(result_ == Result::Pending && context.IsReentry())
             return true;
 
-        if(reader.result_ == Result::Success && !context.IsReentry())
+        if(result_ == Result::Success && !context.IsReentry())
             return true;
 
         return false;
     }
 
-    bool IsNotPendingOrBuffer(StateMachineContext& context)
+    bool ArmorReaderImpl::IsNotPendingOrBuffer(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        return (reader.result_ != Result::Pending || reader.in_stm_.GetCount() > 0);
+        return (result_ != Result::Pending || in_stm_.GetCount() > 0);
     }
 
     // Unknown
 
-    bool Unknown_CanEnter(StateMachineContext& context)
+    bool ArmorReaderImpl::Unknown_CanEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        switch(reader.result_)
+        switch(result_)
         {
             case Result::None:
             case Result::Pending:
@@ -429,66 +445,58 @@ namespace EncryptMsg
         }
     }
 
-    void Unknown_OnEnter(StateMachineContext& context)
+    void ArmorReaderImpl::Unknown_OnEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        reader.result_ = reader.ReadUnknown();
+        result_ = ReadUnknown();
     }
 
     // Disabled
 
-    bool Disabled_CanEnter(StateMachineContext& context)
+    bool ArmorReaderImpl::Disabled_CanEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        return (reader.result_ == Result::Disabled);
+        return (result_ == Result::Disabled);
     }
 
-    void Disabled_OnEnter(StateMachineContext& context)
+    void ArmorReaderImpl::Disabled_OnEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        reader.status_ = ArmorStatus::Disabled;
+        status_ = ArmorStatus::Disabled;
     }
 
     // BeginHeader
 
-    void BeginHeader_OnEnter(StateMachineContext& context)
+    void ArmorReaderImpl::BeginHeader_OnEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        reader.status_ = ArmorStatus::Enabled;
-        reader.result_ = reader.ReadBeginHeader();
+        status_ = ArmorStatus::Enabled;
+        result_ = ReadBeginHeader();
     }
 
     // Header
 
-    void Header_OnEnter(StateMachineContext& context)
+    void ArmorReaderImpl::Header_OnEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        reader.result_ = reader.ReadHeader();
+        result_ = ReadHeader();
     }
 
-    void Payload_OnEnter(StateMachineContext& context)
+    void ArmorReaderImpl::Payload_OnEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        reader.result_ = reader.ReadPayload(*reader.out_);
+        result_ = ReadPayload(*out_);
     }
 
-    void CRC_OnEnter(StateMachineContext& context)
+    void ArmorReaderImpl::CRC_OnEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        reader.result_ = reader.ReadCRC();
+        result_ = ReadCRC();
     }
 
-    void Tail_OnEnter(StateMachineContext& context)
+    void ArmorReaderImpl::Tail_OnEnter(StateMachineContext&)
     {
-        auto &reader = context.Extra<ArmorReaderImpl>();
-        reader.result_ = reader.ReadTail();
+        result_ = ReadTail();
     }
 
-    void TailFound_OnEnter(StateMachineContext&)
+    void ArmorReaderImpl::TailFound_OnEnter(StateMachineContext&)
     {
     }
 
-    void Fail_OnEnter(StateMachineContext& context)
+    void ArmorReaderImpl::Fail_OnEnter(StateMachineContext& context)
     {
         context.SetFailed(true);
     }
@@ -526,6 +534,7 @@ namespace EncryptMsg
 
     EmsgResult ArmorReaderImpl::Finish(OutStream &out)
     {
+        out_ = &out;
         finish_ = true;
         return Read(out);
     }

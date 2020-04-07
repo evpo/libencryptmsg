@@ -54,4 +54,46 @@ namespace LightStateMachine
             BoolFunction can_enter_;
             BoolFunction can_exit_;
     };
+
+    template<class T>
+    struct VoidMemberFunction
+    {
+        using TMemberFunc = void (T::*)(StateMachineContext&);
+        private:
+            T *object_;
+            TMemberFunc member_func_;
+        public:
+            VoidMemberFunction(T *object, TMemberFunc member_func):
+                object_(object),
+                member_func_(member_func)
+            {
+            }
+
+            void operator()(StateMachineContext& context)
+            {
+                (object_->*member_func_)(context);
+            }
+
+    };
+
+    template<class T>
+    struct BoolMemberFunction
+    {
+        using TMemberFunc = bool (T::*)(StateMachineContext&);
+        private:
+            T *object_;
+            TMemberFunc member_func_;
+        public:
+            BoolMemberFunction(T *object, TMemberFunc member_func):
+                object_(object),
+                member_func_(member_func)
+            {
+            }
+
+            bool operator()(StateMachineContext& context)
+            {
+                return (object_->*member_func_)(context);
+            }
+    };
+
 }
