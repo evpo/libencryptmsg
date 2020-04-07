@@ -55,6 +55,7 @@ namespace LightStateMachine
     {
         current_state_ = start_state_;
         context_->SetFailed(false);
+        is_first_entry_ = true;
     }
 
     bool StateMachine::NextState()
