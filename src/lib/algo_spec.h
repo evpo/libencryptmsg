@@ -24,7 +24,6 @@ namespace EncryptMsg
         Unknown = -1,
         TripleDES = 2,
         CAST5 = 3,
-        Blowfish = 4,
         AES128 = 7,
         AES192 =  8,
         AES256 = 9,

@@ -434,7 +434,6 @@ namespace EncryptMsg
         {
             case CipherAlgo::TripleDES:
             case CipherAlgo::CAST5:
-            case CipherAlgo::Blowfish:
             case CipherAlgo::AES128:
             case CipherAlgo::AES192:
             case CipherAlgo::AES256:

@@ -44,7 +44,6 @@ namespace EncryptMsg
 
         TestParameters MessageDecryptionFixture::ParameterCombination[] =
         {
-            {1024, "simple_text.txt.blowfish.sha160.gpg", 37748736, "0EAF2684FC98FBEA"},
             {1024, "simple_text.txt.twofish.sha160.gpg", 37748736, "B20F6271BFD9FAE3"},
             {1024, "simple_text.txt.aes192.sha160.gpg", 37748736, "5E91968C5DE5CE34"},
             {1024, "simple_text.txt.aes256.sha512.gpg", 37748736, "02F89FB223F53ED5"},
@@ -165,10 +164,6 @@ namespace EncryptMsg
             if(cipher == "cast5")
             {
                 ASSERT_EQ(CipherAlgo::CAST5, config.GetCipherAlgo());
-            }
-            else if(cipher == "blowfish")
-            {
-                ASSERT_EQ(CipherAlgo::Blowfish, config.GetCipherAlgo());
             }
             else if(cipher == "aes192")
             {
