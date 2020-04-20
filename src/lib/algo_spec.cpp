@@ -33,6 +33,17 @@ namespace EncryptMsg
                 };
                 return cast5;
 
+            case CipherAlgo::Blowfish:
+
+                static AlgoSpec blowfish =
+                {
+                    CipherAlgo::Blowfish,
+                    "Blowfish/CFB",
+                    64,
+                    128
+                };
+                return blowfish;
+
             case CipherAlgo::AES128:
 
                 static AlgoSpec aes128 =
@@ -54,6 +65,17 @@ namespace EncryptMsg
                     256
                 };
                 return aes256;
+
+            case CipherAlgo::Twofish:
+
+                static AlgoSpec twofish =
+                {
+                    CipherAlgo::Twofish,
+                    "Twofish/CFB",
+                    16,
+                    256
+                };
+                return blowfish;
 
             default:
                 static AlgoSpec unknown =
