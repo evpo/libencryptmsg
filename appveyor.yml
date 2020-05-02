@@ -35,6 +35,6 @@ build_script:
   - g++ --version
   - uname
   - mingw32-make -j2 -C c:\Users\appveyor\botan libs
-  - python configure.py --debug-mode --test --build-cli --botan-include-dir %BOTAN%\build\include --botan-lib-dir %BOTAN% --zlib-include-dir %ZLIB% --zlib-lib-dir %ZLIB%
+  - python configure.py --debug-mode --test --build-cli --botan-include-dir %BOTAN%\build\include --botan-lib-dir %BOTAN% --zlib-lib-dir %ZLIB%
   - mingw32-make -j2
   - bash -c "cd bin/debug && ./encryptmsg-test"
