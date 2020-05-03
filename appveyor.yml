@@ -32,7 +32,7 @@ build_script:
   - bash -c "mv zlib-1.2.11 /c/Users/appveyor/"
   - appveyor DownloadFile https://www.sourceware.org/pub/bzip2/bzip2-latest.tar.gz -FileName bzip2-latest.tar.gz
   - 7z x bzip2-latest.tar.gz > NUL
-  - 7z x bzip2-latest.tar > NUL
+  - 7z x bzip2-1.0.8.tar > NUL
   - bash -c "mv bzip2-1.0.8 /c/Users/appveyor/"
   - mingw32-make -C c:\Users\appveyor\zlib-1.2.11 -f win32/Makefile.gcc
   - mingw32-make -C %BZIP2% libbz2.a
