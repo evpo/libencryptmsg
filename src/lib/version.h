@@ -14,7 +14,7 @@
 #define VER_COMPANYNAME_STR         "libencryptmsg"
 #define VER_FILEDESCRIPTION_STR     "libencryptmsg"
 #define VER_INTERNALNAME_STR        "Evgeny Pokhilko 2020 Copyright"
-#define VER_LEGALCOPYRIGHT_STR      "Copyright"
+#define VER_LEGALCOPYRIGHT_STR      "Evgeny Pokhilko 2020 Copyright"
 #define VER_LEGALTRADEMARKS1_STR    "All Rights Reserved"
 #define VER_LEGALTRADEMARKS2_STR    VER_LEGALTRADEMARKS1_STR
 #define VER_ORIGINALFILENAME_STR    ""
